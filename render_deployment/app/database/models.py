@@ -146,27 +146,89 @@ class Lead(db.Model):
             'note_google': self.note_google,
             'nb_avis_google': self.nb_avis_google,
             'business_type': self.business_type,
+            'has_video_on_site': self.has_video_on_site,
+            'has_images_on_site': self.has_images_on_site,
+            'videos_count': self.videos_count,
+            'images_count': self.images_count,
+            'texte_site_resume': self.texte_site_resume,
+            'produits_services_detectes': self.produits_services_detectes,
+            'contact_form_detecte': self.contact_form_detecte,
+            'social_media_detectes': self.social_media_detectes,
+            'nb_posts_instagram': self.nb_posts_instagram,
+            'nb_followers_instagram': self.nb_followers_instagram,
+            'nb_following_instagram': self.nb_following_instagram,
+            'bio_instagram': self.bio_instagram,
+            'nb_likes_facebook': self.nb_likes_facebook,
+            'nb_followers_facebook': self.nb_followers_facebook,
+            'description_facebook': self.description_facebook,
+            'intro_facebook': self.intro_facebook,
+            'facebook_stats': self.facebook_stats,
+            
+            # Informations de contact Facebook
+            'facebook_telephone': self.facebook_telephone,
+            'facebook_email': self.facebook_email,
+            'facebook_adresse': self.facebook_adresse,
+            'facebook_site_web': self.facebook_site_web,
+            
+            # Informations de contact Instagram
+            'instagram_telephone': self.instagram_telephone,
+            'instagram_email': self.instagram_email,
+            'instagram_adresse': self.instagram_adresse,
+            'instagram_site_web': self.instagram_site_web,
+            'instagram_screenshot_path': self.instagram_screenshot_path,
+            'facebook_screenshot_path': self.facebook_screenshot_path,
+            'ai_extraction_status': self.ai_extraction_status,
+            'ai_extraction_log': self.ai_extraction_log,
+            'ai_analysis': self.ai_analysis,
+            
+            # Données Google Maps
+            'google_maps_email': self.google_maps_email,
+            'google_maps_telephone': self.google_maps_telephone,
+            'google_maps_adresse': self.google_maps_adresse,
+            
+            # Données Site Web (IA)
+            'site_web_email': self.site_web_email,
+            'site_web_telephone': self.site_web_telephone,
+            'site_web_adresse': self.site_web_adresse,
+            'site_web_description': self.site_web_description,
+            'site_web_horaires': self.site_web_horaires,
+            'site_web_services': self.site_web_services,
+            
+            # Données Réseaux Sociaux (IA)
+            'facebook_stats': self.facebook_stats,
+            'facebook_description': self.facebook_description,
+            'instagram_stats': self.instagram_stats,
+            'instagram_description': self.instagram_description,
+            
+            # Scoring IA
+            'score_ia': self.score_ia,
+            'argumentaire_ia': self.argumentaire_ia,
+            
+            'statut_scraping': self.statut_scraping,
+            'log': self.log,
+            'score_opportunite': self.score_opportunite,
+            'argumentaire': self.argumentaire,
+            # Nouvelles colonnes pour suivi des informations récupérées
             'has_email': self.has_email,
             'has_phone': self.has_phone,
             'has_address': self.has_address,
             'has_instagram': self.has_instagram,
             'has_facebook': self.has_facebook,
             'has_contact_form': self.has_contact_form,
+            # Nouvelles colonnes pour suivi des contacts effectués
             'contacted_by_email': self.contacted_by_email,
             'contacted_by_phone': self.contacted_by_phone,
             'contacted_by_address': self.contacted_by_address,
             'contacted_by_instagram': self.contacted_by_instagram,
             'contacted_by_facebook': self.contacted_by_facebook,
             'contacted_by_contact_form': self.contacted_by_contact_form,
+            # Dates de contact
             'date_contacted_by_email': self.date_contacted_by_email.isoformat() if self.date_contacted_by_email else None,
             'date_contacted_by_phone': self.date_contacted_by_phone.isoformat() if self.date_contacted_by_phone else None,
             'date_contacted_by_address': self.date_contacted_by_address.isoformat() if self.date_contacted_by_address else None,
             'date_contacted_by_instagram': self.date_contacted_by_instagram.isoformat() if self.date_contacted_by_instagram else None,
             'date_contacted_by_facebook': self.date_contacted_by_facebook.isoformat() if self.date_contacted_by_facebook else None,
             'date_contacted_by_contact_form': self.date_contacted_by_contact_form.isoformat() if self.date_contacted_by_contact_form else None,
-            'score_opportunite': self.score_opportunite,
-            'score_ia': self.score_ia,
-            'argumentaire_ia': self.argumentaire_ia,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
