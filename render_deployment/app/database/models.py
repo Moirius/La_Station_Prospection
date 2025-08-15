@@ -54,6 +54,11 @@ class Lead(db.Model):
     description_facebook = db.Column(db.Text, nullable=True)
     intro_facebook = db.Column(db.Text, nullable=True)
     facebook_stats = db.Column(db.Text, nullable=True)
+    facebook_description = db.Column(db.Text, nullable=True)
+    
+    # Données Instagram supplémentaires
+    instagram_stats = db.Column(db.Text, nullable=True)
+    instagram_description = db.Column(db.Text, nullable=True)
     
     # Informations de contact Facebook
     facebook_telephone = db.Column(db.String(50), nullable=True)
