@@ -1,0 +1,55 @@
+========================================
+  INSTALLATION LA STATION PROSPECTION
+========================================
+                    MAC
+
+🎯 MÉTHODE SIMPLE (Recommandée)
+
+1. Double-cliquez sur "launch.command"
+2. L'installation se fera automatiquement
+3. L'application s'ouvrira sur http://localhost:5000
+
+⚠️ Si le double-clic ne fonctionne pas :
+
+1. Ouvrir le Terminal (Applications > Utilitaires > Terminal)
+2. Naviguer vers le dossier du projet :
+   cd /chemin/vers/la_station_prospection
+3. Rendre le fichier exécutable :
+   chmod +x launch.command
+4. Double-cliquer sur launch.command
+
+🔧 MÉTHODE MANUELLE (Alternative)
+
+1. Ouvrir le Terminal
+2. Naviguer vers le dossier :
+   cd /chemin/vers/la_station_prospection
+3. Créer l'environnement virtuel :
+   python3 -m venv venv
+4. Activer l'environnement :
+   source venv/bin/activate
+5. Installer les dépendances :
+   pip install -r requirements.txt
+6. Installer Playwright :
+   playwright install chromium
+7. Créer la base de données :
+   python create_new_db.py
+8. Lancer l'application :
+   python run.py
+
+📋 PRÉREQUIS
+
+- Python 3.10+ installé sur votre Mac
+- Connexion Internet pour télécharger les dépendances
+- Comptes API (OpenAI, Google Places) pour utiliser toutes les fonctionnalités
+
+🔐 PREMIÈRE FOIS
+
+Si macOS affiche un message de sécurité :
+- Cliquez sur "Ouvrir quand même"
+- Ou allez dans Préférences Système > Sécurité et confidentialité
+
+✅ RÉSULTAT
+
+L'application sera accessible sur : http://localhost:5000
+
+🎉 C'est tout ! L'installation est automatique et simple.

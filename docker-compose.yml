@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  la-station-prospection:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./instance:/app/instance
+      - ./logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=run.py
+    restart: unless-stopped
+    container_name: la-station-prospection

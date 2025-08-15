@@ -1,0 +1,380 @@
+{% extends "base.html" %} {% block title %}Logs - La Station Prospection{%
+endblock %} {% block page_title %}Logs Centralisés{% endblock %} {% block
+page_actions %}
+<button class="btn btn-outline-danger" onclick="clearLogs()">
+  <i class="fas fa-trash"></i> Vider les Logs
+</button>
+<button class="btn btn-outline-primary" onclick="refreshLogs()">
+  <i class="fas fa-sync-alt"></i> Actualiser
+</button>
+{% endblock %} {% block content %}
+<!-- Statistiques des logs -->
+<div class="row mb-4">
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-list fa-2x text-primary mb-2"></i>
+        <h5 class="card-title" id="totalLogs">0</h5>
+        <p class="card-text">Total</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+        <h5 class="card-title" id="errorLogs">0</h5>
+        <p class="card-text">Erreurs</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-exclamation-circle fa-2x text-warning mb-2"></i>
+        <h5 class="card-title" id="warningLogs">0</h5>
+        <p class="card-text">Avertissements</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-info-circle fa-2x text-info mb-2"></i>
+        <h5 class="card-title" id="infoLogs">0</h5>
+        <p class="card-text">Infos</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-bug fa-2x text-secondary mb-2"></i>
+        <h5 class="card-title" id="debugLogs">0</h5>
+        <p class="card-text">Debug</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-clock fa-2x text-success mb-2"></i>
+        <h5 class="card-title" id="lastLogTime">-</h5>
+        <p class="card-text">Dernier log</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><i class="fas fa-filter"></i> Filtres</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3">
+        <label for="levelFilter" class="form-label">Niveau</label>
+        <select class="form-select" id="levelFilter">
+          <option value="">Tous les niveaux</option>
+          <option value="ERROR">Erreurs</option>
+          <option value="WARNING">Avertissements</option>
+          <option value="INFO">Infos</option>
+          <option value="DEBUG">Debug</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="sourceFilter" class="form-label">Source</label>
+        <select class="form-select" id="sourceFilter">
+          <option value="">Toutes les sources</option>
+          <option value="system">Système</option>
+          <option value="web">Web</option>
+          <option value="lead">Leads</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="limitFilter" class="form-label">Limite</label>
+        <select class="form-select" id="limitFilter">
+          <option value="50">50 logs</option>
+          <option value="100" selected>100 logs</option>
+          <option value="200">200 logs</option>
+          <option value="500">500 logs</option>
+          <option value="0">Tous</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">&nbsp;</label>
+        <div>
+          <button class="btn btn-primary" onclick="applyFilters()">
+            <i class="fas fa-search"></i> Appliquer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des logs -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="fas fa-terminal"></i> Logs</h5>
+    <span class="badge bg-primary" id="logsCount">0 logs</span>
+  </div>
+  <div class="card-body">
+    <div id="logsContainer">
+      <div class="text-center py-4">
+        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+        <p class="text-muted mt-2">Chargement des logs...</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  // Variables globales
+  let logsData = [];
+  let currentFilters = {
+    level: "",
+    source: "",
+    limit: 100,
+  };
+
+  // Initialisation
+  $(document).ready(function () {
+    loadLogsSummary();
+    loadLogs();
+
+    // Actualisation automatique toutes les 10 secondes
+    setInterval(function () {
+      loadLogsSummary();
+    }, 10000);
+
+    $("#limitFilter").on("change", function () {
+      currentFilters.limit = parseInt($(this).val());
+      loadLogs();
+    });
+  });
+
+  // Charger le résumé des logs
+  function loadLogsSummary() {
+    $.ajax({
+      url: "/api/logs/summary",
+      method: "GET",
+      success: function (response) {
+        if (response.success) {
+          updateLogsSummary(response.summary);
+        }
+      },
+      error: function () {
+        console.error("Erreur lors du chargement du résumé des logs");
+      },
+    });
+  }
+
+  // Mettre à jour le résumé des logs
+  function updateLogsSummary(summary) {
+    $("#totalLogs").text(summary.total_logs);
+    $("#errorLogs").text(summary.error_count);
+    $("#warningLogs").text(summary.warning_count);
+    $("#infoLogs").text(summary.info_count);
+    $("#debugLogs").text(summary.debug_count);
+
+    if (summary.last_log) {
+      const lastLogTime = new Date(summary.last_log.timestamp);
+      $("#lastLogTime").text(lastLogTime.toLocaleTimeString());
+    } else {
+      $("#lastLogTime").text("-");
+    }
+  }
+
+  // Charger les logs
+  function loadLogs() {
+    $("#logsContainer").html(`
+            <div class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                <p class="text-muted mt-2">Chargement des logs...</p>
+            </div>
+        `);
+
+    const params = new URLSearchParams();
+    if (currentFilters.level) params.append("level", currentFilters.level);
+    if (currentFilters.source) params.append("source", currentFilters.source);
+    params.append("limit", currentFilters.limit);
+
+    $.ajax({
+      url: `/api/logs?${params.toString()}`,
+      method: "GET",
+      success: function (response) {
+        if (response.success) {
+          logsData = response.logs;
+          displayLogs(logsData);
+          $("#logsCount").text(`${response.count} logs`);
+        } else {
+          $("#logsContainer").html(`
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                            <p class="text-muted mt-2">Erreur: ${response.message}</p>
+                        </div>
+                    `);
+        }
+      },
+      error: function (xhr) {
+        const response = xhr.responseJSON || {};
+        $("#logsContainer").html(`
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        <p class="text-muted mt-2">Erreur: ${
+                          response.message || "Erreur de connexion"
+                        }</p>
+                    </div>
+                `);
+      },
+    });
+  }
+
+  // Afficher les logs
+  function displayLogs(logs) {
+    if (logs.length === 0) {
+      $("#logsContainer").html(`
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-2x text-muted"></i>
+                    <p class="text-muted mt-2">Aucun log trouvé</p>
+                </div>
+            `);
+      return;
+    }
+
+    let html =
+      '<div class="table-responsive"><table class="table table-sm table-hover">';
+    html += `
+            <thead>
+                <tr>
+                    <th>Horodatage</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Lead</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+    logs.forEach((log) => {
+      const levelClass = getLevelClass(log.level);
+      const timestamp = new Date(log.timestamp).toLocaleString("fr-FR");
+
+      html += `
+                <tr>
+                    <td><small class="text-muted">${timestamp}</small></td>
+                    <td><span class="badge bg-${levelClass}">${
+        log.level
+      }</span></td>
+                    <td><span class="badge bg-secondary">${
+                      log.source
+                    }</span></td>
+                    <td>
+                        ${
+                          log.lead_id
+                            ? `<small>ID: ${
+                                log.lead_id
+                              }</small><br><small class="text-muted">${
+                                log.lead_name || "N/A"
+                              }</small>`
+                            : "-"
+                        }
+                    </td>
+                    <td><code>${escapeHtml(log.message)}</code></td>
+                </tr>
+            `;
+    });
+
+    html += "</tbody></table></div>";
+    $("#logsContainer").html(html);
+  }
+
+  // Obtenir la classe CSS pour le niveau de log
+  function getLevelClass(level) {
+    switch (level) {
+      case "ERROR":
+        return "danger";
+      case "WARNING":
+        return "warning";
+      case "INFO":
+        return "info";
+      case "DEBUG":
+        return "secondary";
+      default:
+        return "primary";
+    }
+  }
+
+  // Échapper le HTML
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Appliquer les filtres
+  function applyFilters() {
+    currentFilters.level = $("#levelFilter").val();
+    currentFilters.source = $("#sourceFilter").val();
+    currentFilters.limit = parseInt($("#limitFilter").val());
+
+    loadLogs();
+  }
+
+  // Actualiser les logs
+  function refreshLogs() {
+    loadLogsSummary();
+    loadLogs();
+  }
+
+  // Vider les logs
+  function clearLogs() {
+    if (confirm("Êtes-vous sûr de vouloir vider tous les logs ?")) {
+      $.ajax({
+        url: "/api/logs/clear",
+        method: "POST",
+        success: function (response) {
+          if (response.success) {
+            showAlert("Logs vidés avec succès", "success");
+            loadLogsSummary();
+            loadLogs();
+          } else {
+            showAlert(`Erreur: ${response.message}`, "danger");
+          }
+        },
+        error: function (xhr) {
+          const response = xhr.responseJSON || {};
+          showAlert(
+            `Erreur: ${response.message || "Erreur de connexion"}`,
+            "danger"
+          );
+        },
+      });
+    }
+  }
+
+  // Fonction utilitaire pour afficher des alertes
+  function showAlert(message, type) {
+    const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+    // Supprimer les anciennes alertes
+    $(".alert").remove();
+
+    // Ajouter la nouvelle alerte
+    $(".container-fluid").prepend(alertHtml);
+
+    // Auto-fermeture après 5 secondes
+    setTimeout(function () {
+      $(".alert").fadeOut();
+    }, 5000);
+  }
+</script>
+{% endblock %}

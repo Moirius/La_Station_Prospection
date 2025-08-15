@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La Station Prospection - Interface Cartographique</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config.GOOGLE_PLACES_API_KEY }}&libraries=places,geometry"></script>
+
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+
+      .main-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: 400px;
+        background: white;
+        border-right: 1px solid #dee2e6;
+        overflow-y: auto;
+        padding: 1rem;
+      }
+
+      .map-container {
+        flex: 1;
+        position: relative;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+
+      .control-panel {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .stats-panel {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .zone-item {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #007bff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .zone-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .zone-item.terminée {
+        border-left-color: #28a745;
+      }
+
+      .zone-item.en_cours {
+        border-left-color: #ffc107;
+      }
+
+      .zone-item.planifiée {
+        border-left-color: #6c757d;
+      }
+
+      .zone-item.erreur {
+        border-left-color: #dc3545;
+      }
+
+      .form-control,
+      .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .stat-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+      }
+
+      .spinner-border {
+        color: #667eea;
+      }
+
+      .alert {
+        border-radius: 8px;
+        border: none;
+      }
+
+      .progress {
+        height: 8px;
+        border-radius: 4px;
+      }
+
+      .map-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: white;
+        border-radius: 8px;
+        padding: 0.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Styles pour l'interface hybride */
+      .suggestion-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        transition: all 0.2s ease;
+      }
+
+      .suggestion-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      }
+
+      .history-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 15px;
+        transition: all 0.2s ease;
+      }
+
+      .history-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+      }
+
+      #businessSearch {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+      }
+
+      #businessSearch:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+      }
+
+      #showOfficialTypes {
+        color: #667eea;
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      #showOfficialTypes:hover {
+        color: #5a6fd8;
+        text-decoration: underline;
+      }
+
+      .map-legend {
+        position: absolute;
+        top: 60px;
+        right: 10px;
+        z-index: 1000;
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        max-width: 250px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .legend-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+      }
+
+      .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        border: 2px solid #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <!-- Header -->
+      <div class="header">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-map-marked-alt me-2"></i>
+              Interface Cartographique
+            </h1>
+            <p class="mb-0 opacity-75">
+              Planification et suivi du scraping géographique
+            </p>
+          </div>
+          <div>
+            <a href="/" class="btn btn-outline-light btn-sm">
+              <i class="fas fa-home me-1"></i>
+              Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <!-- Control Panel -->
+          <div class="control-panel">
+            <h5 class="mb-3">
+              <i class="fas fa-cogs me-2"></i>
+              Configuration
+            </h5>
+
+            <form id="scrapingForm">
+              <div class="mb-3">
+                <label for="location" class="form-label">Localisation</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="location"
+                  placeholder="Paris, France"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label for="businessSearch" class="form-label"
+                  >Type d'entreprise</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="businessSearch"
+                  placeholder="Tapez votre recherche (ex: fleuriste, boulangerie, coiffeur...)"
+                  autocomplete="off"
+                />
+
+                <!-- Suggestions populaires -->
+                <div class="mt-2">
+                  <small class="text-muted">Suggestions populaires :</small>
+                  <div class="d-flex flex-wrap gap-1 mt-1">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="fleuriste"
+                    >
+                      Fleuriste
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="boulangerie"
+                    >
+                      Boulangerie
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="coiffeur"
+                    >
+                      Coiffeur
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="restaurant"
+                    >
+                      Restaurant
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="pharmacie"
+                    >
+                      Pharmacie
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary suggestion-btn"
+                      data-term="art_gallery"
+                    >
+                      Galerie d'art
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Historique des recherches -->
+                <div class="mt-2" id="searchHistory" style="display: none">
+                  <small class="text-muted">Recherches récentes :</small>
+                  <div class="d-flex flex-wrap gap-1 mt-1" id="historyItems">
+                    <!-- Les éléments d'historique seront ajoutés ici -->
+                  </div>
+                </div>
+
+                <!-- Liste déroulante des types officiels (cachée par défaut) -->
+                <div class="mt-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-link p-0"
+                    id="showOfficialTypes"
+                  >
+                    <small>Voir les types officiels Google Places</small>
+                  </button>
+                  <select
+                    class="form-select mt-1"
+                    id="businessType"
+                    style="display: none"
+                  >
+                    <option value="">Tous les types</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- AJOUT CASE A COCHER FILTRE ANTI-HOTELS -->
+              <div class="form-check mb-3">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  value="1"
+                  id="antiHotels"
+                />
+                <label class="form-check-label" for="antiHotels">
+                  Filtre anti-hôtels
+                  <span
+                    title="Exclure les hôtels même s'ils ont le type recherché."
+                    >(?)</span
+                  >
+                </label>
+              </div>
+
+              <!-- NOUVELLE CASE A COCHER RECHERCHE LARGE -->
+              <div class="form-check mb-3">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  value="1"
+                  id="wideSearch"
+                />
+                <label class="form-check-label" for="wideSearch">
+                  <strong>Recherche large</strong>
+                  <span
+                    title="Utilise uniquement votre mot-clé sans filtres additionnels. Trouve plus d'entreprises mais peut inclure des résultats moins pertinents."
+                    >(?)</span
+                  >
+                </label>
+              </div>
+
+              <div class="row">
+                <div class="col-6">
+                  <label for="radius" class="form-label">Rayon (km)</label>
+                  <input
+                    type="range"
+                    class="form-range"
+                    id="radius"
+                    min="1"
+                    max="20"
+                    value="5"
+                  />
+                  <div class="text-center">
+                    <span id="radiusValue">5</span> km
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label for="maxResults" class="form-label"
+                    >Max résultats</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="maxResults"
+                    min="5"
+                    max="50"
+                    value="20"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-6">
+                  <label for="minRating" class="form-label">Note min</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="minRating"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value="4.0"
+                  />
+                </div>
+                <div class="col-6">
+                  <label for="minReviews" class="form-label">Avis min</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="minReviews"
+                    min="0"
+                    value="10"
+                  />
+                </div>
+              </div>
+
+              <div class="d-grid gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-play me-2"></i>
+                  Démarrer le Scraping
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  id="suggestZones"
+                >
+                  <i class="fas fa-lightbulb me-2"></i>
+                  Suggérer des Zones
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Loading -->
+          <div class="loading" id="loading">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Traitement en cours...</p>
+          </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-container">
+          <div id="map"></div>
+
+          <!-- Map Controls -->
+          <div class="map-controls">
+            <button class="btn btn-sm btn-outline-secondary" id="clearMap">
+              <i class="fas fa-eraser"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-info" id="showLegend">
+              <i class="fas fa-palette"></i>
+            </button>
+          </div>
+
+          <!-- Légende des couleurs -->
+          <div class="map-legend" id="mapLegend" style="display: none">
+            <div class="legend-header">
+              <h6 class="mb-2">
+                <i class="fas fa-palette"></i> Légende des activités
+              </h6>
+              <button
+                type="button"
+                class="btn-close btn-close-sm"
+                id="hideLegend"
+              ></button>
+            </div>
+            <div class="legend-content" id="legendContent">
+              <!-- Le contenu de la légende sera généré dynamiquement -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Variables globales
+      let map;
+      let zones = [];
+      let leads = [];
+      let zoneMarkers = [];
+      let leadMarkers = [];
+      let circles = [];
+      let showZones = true;
+      let showLeads = true;
+
+      // Initialisation
+      document.addEventListener("DOMContentLoaded", function () {
+        initializeMap();
+        loadBusinessTypes();
+        loadLeads();
+        setupEventListeners();
+      });
+
+      // Initialiser la carte
+      function initializeMap() {
+        const defaultLocation = { lat: 48.8566, lng: 2.3522 }; // Paris
+
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: defaultLocation,
+          zoom: 10,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        });
+
+        // Ajouter un marqueur pour la recherche
+        map.addListener("click", function (event) {
+          const lat = event.latLng.lat();
+          const lng = event.latLng.lng();
+
+          // Mettre à jour le champ de localisation
+          reverseGeocode(lat, lng);
+        });
+      }
+
+      // Charger les types d'entreprises
+      async function loadBusinessTypes() {
+        try {
+          const response = await fetch("/api/business-types");
+          const data = await response.json();
+
+          if (data.success) {
+            const select = document.getElementById("businessType");
+            data.business_types.forEach((type) => {
+              const option = document.createElement("option");
+              option.value = type.value;
+              option.textContent = type.label;
+              select.appendChild(option);
+            });
+          }
+        } catch (error) {
+          console.error(
+            "Erreur lors du chargement des types d'entreprises:",
+            error
+          );
+        }
+      }
+
+      // Charger les leads
+      async function loadLeads() {
+        try {
+          const response = await fetch("/api/leads");
+          const data = await response.json();
+
+          if (data.success) {
+            leads = data.leads;
+            displayLeads();
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des leads:", error);
+        }
+      }
+
+      // Afficher les leads sur la carte
+      function displayLeads() {
+        // Nettoyer les marqueurs existants
+        leadMarkers.forEach((marker) => marker.setMap(null));
+        leadMarkers = [];
+
+        if (!showLeads) return;
+
+        // Palette de couleurs variées (20 couleurs)
+        const colorPalette = [
+          "#e6194b",
+          "#3cb44b",
+          "#ffe119",
+          "#4363d8",
+          "#f58231",
+          "#911eb4",
+          "#46f0f0",
+          "#f032e6",
+          "#bcf60c",
+          "#fabebe",
+          "#008080",
+          "#e6beff",
+          "#9a6324",
+          "#fffac8",
+          "#800000",
+          "#aaffc3",
+          "#808000",
+          "#ffd8b1",
+          "#000075",
+          "#808080",
+        ];
+
+        // Récupérer la liste unique des business_type présents dans les leads
+        const activities = [
+          ...new Set(leads.map((lead) => lead.business_type || "other")),
+        ].sort();
+
+        // Générer le mapping activité → couleur
+        const activityToColor = {};
+        activities.forEach((activity, idx) => {
+          activityToColor[activity] = colorPalette[idx % colorPalette.length];
+        });
+
+        // Fonction pour obtenir la couleur d'une activité
+        function getColorForActivity(activity) {
+          return activityToColor[activity || "other"] || "#000000";
+        }
+
+        leads.forEach((lead) => {
+          if (lead.latitude && lead.longitude) {
+            const position = { lat: lead.latitude, lng: lead.longitude };
+
+            // Couleur selon l'activité (business_type)
+            const color = getColorForActivity(lead.business_type);
+            const businessTypeFr = translateBusinessType(lead.business_type);
+
+            const marker = new google.maps.Marker({
+              position: position,
+              map: map,
+              title: `${lead.nom} (${businessTypeFr})`,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: color,
+                fillOpacity: 0.8,
+                strokeColor: "#ffffff",
+                strokeWeight: 2,
+              },
+            });
+
+            // Info window
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div class="info-window">
+                  <h5>${lead.nom}</h5>
+                  <p><strong>Type :</strong> <span style="color: ${color}; font-weight: bold;">${businessTypeFr}</span></p>
+                  <p><strong>Adresse:</strong> ${
+                    lead.adresse || "Non disponible"
+                  }</p>
+                  <p><strong>Téléphone:</strong> ${
+                    lead.telephone || "Non disponible"
+                  }</p>
+                  <p><strong>Note Google:</strong> <span class="rating">${
+                    lead.note_google || "N/A"
+                  }</span></p>
+                  <p><strong>Avis:</strong> ${lead.nb_avis_google || "N/A"}</p>
+                  <p><strong>Statut:</strong> ${lead.statut_scraping}</p>
+                  <p><strong>Site web:</strong> ${
+                    lead.site_web ? "Oui" : "Non"
+                  }</p>
+                  <p><strong>Facebook:</strong> ${
+                    lead.facebook_url ? "Oui" : "Non"
+                  }</p>
+                  <p><strong>Instagram:</strong> ${
+                    lead.instagram_url ? "Oui" : "Non"
+                  }</p>
+                </div>
+              `,
+            });
+
+            marker.addListener("click", () => {
+              infoWindow.open(map, marker);
+            });
+
+            leadMarkers.push(marker);
+          }
+        });
+
+        // Mettre à jour la légende si elle est visible
+        if (document.getElementById("mapLegend").style.display !== "none") {
+          showLegend();
+        }
+      }
+
+      // Fonction utilitaire pour traduire le business_type en français
+      function translateBusinessType(type) {
+        const translations = {
+          restaurant: "Restaurant",
+          lodging: "Hôtel",
+          hotel: "Hôtel",
+          bar: "Bar",
+          cafe: "Café",
+          bakery: "Boulangerie",
+          pharmacy: "Pharmacie",
+          florist: "Fleuriste",
+          beauty_salon: "Salon de beauté",
+          hair_care: "Coiffeur",
+          spa: "Spa",
+          gym: "Salle de sport",
+          hospital: "Hôpital",
+          school: "École",
+          university: "Université",
+          bank: "Banque",
+          post_office: "Bureau de poste",
+          police: "Police",
+          fire_station: "Caserne de pompiers",
+          gas_station: "Station-service",
+          car_dealer: "Concessionnaire",
+          car_repair: "Garage",
+          car_rental: "Location de voitures",
+          airport: "Aéroport",
+          train_station: "Gare",
+          bus_station: "Gare routière",
+          subway_station: "Station de métro",
+          park: "Parc",
+          museum: "Musée",
+          movie_theater: "Cinéma",
+          night_club: "Boîte de nuit",
+          casino: "Casino",
+          amusement_park: "Parc d'attractions",
+          zoo: "Zoo",
+          aquarium: "Aquarium",
+          art_gallery: "Galerie d'art",
+          library: "Bibliothèque",
+          church: "Église",
+          mosque: "Mosquée",
+          synagogue: "Synagogue",
+          hindu_temple: "Temple hindou",
+          cemetery: "Cimetière",
+          funeral_home: "Pompes funèbres",
+          doctor: "Médecin",
+          dentist: "Dentiste",
+          veterinary_care: "Vétérinaire",
+          lawyer: "Avocat",
+          accounting: "Comptable",
+          insurance_agency: "Assureur",
+          real_estate_agency: "Agence immobilière",
+          travel_agency: "Agence de voyage",
+          moving_company: "Déménageur",
+          plumber: "Plombier",
+          electrician: "Électricien",
+          painter: "Peintre",
+          roofing_contractor: "Couvreur",
+          locksmith: "Serrurier",
+          laundry: "Laverie",
+          dry_cleaner: "Pressing",
+          shoe_store: "Magasin de chaussures",
+          clothing_store: "Magasin de vêtements",
+          jewelry_store: "Bijouterie",
+          book_store: "Librairie",
+          electronics_store: "Électronique",
+          hardware_store: "Quincaillerie",
+          furniture_store: "Meubles",
+          home_goods_store: "Maison",
+          department_store: "Grand magasin",
+          shopping_mall: "Centre commercial",
+          supermarket: "Supermarché",
+          convenience_store: "Supérette",
+          liquor_store: "Cave à vins",
+          pet_store: "Animalerie",
+          bicycle_store: "Vélos",
+          car_wash: "Lavage auto",
+          parking: "Parking",
+          storage: "Stockage",
+          rv_park: "Camping-car",
+          campground: "Camping",
+          other: "Autre",
+        };
+        return translations[type] || type || "Autre";
+      }
+
+      // Configuration des événements
+      function setupEventListeners() {
+        // Formulaire de scraping
+        document
+          .getElementById("scrapingForm")
+          .addEventListener("submit", handleScrapingSubmit);
+
+        // Contrôles
+        document
+          .getElementById("radius")
+          .addEventListener("input", function () {
+            document.getElementById("radiusValue").textContent = this.value;
+          });
+
+        document
+          .getElementById("suggestZones")
+          .addEventListener("click", handleSuggestZones);
+        document.getElementById("clearMap").addEventListener("click", clearMap);
+
+        // Gestion de l'interface hybride
+        setupHybridInterface();
+
+        // Gestion de la légende
+        document
+          .getElementById("showLegend")
+          .addEventListener("click", showLegend);
+        document
+          .getElementById("hideLegend")
+          .addEventListener("click", hideLegend);
+      }
+
+      // Configuration de l'interface hybride
+      function setupHybridInterface() {
+        const businessSearch = document.getElementById("businessSearch");
+        const businessType = document.getElementById("businessType");
+        const showOfficialTypes = document.getElementById("showOfficialTypes");
+        const searchHistory = document.getElementById("searchHistory");
+        const historyItems = document.getElementById("historyItems");
+
+        // Charger l'historique depuis localStorage
+        loadSearchHistory();
+
+        // Gestion des suggestions populaires
+        document.querySelectorAll(".suggestion-btn").forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const term = this.getAttribute("data-term");
+            businessSearch.value = term;
+            addToSearchHistory(term);
+            businessSearch.focus();
+          });
+        });
+
+        // Gestion de l'affichage des types officiels
+        showOfficialTypes.addEventListener("click", function () {
+          if (businessType.style.display === "none") {
+            businessType.style.display = "block";
+            this.innerHTML = "<small>Masquer les types officiels</small>";
+          } else {
+            businessType.style.display = "none";
+            this.innerHTML =
+              "<small>Voir les types officiels Google Places</small>";
+          }
+        });
+
+        // Gestion de la saisie dans le champ de recherche
+        businessSearch.addEventListener("input", function () {
+          const value = this.value.trim();
+          if (value.length > 0) {
+            // Masquer les types officiels quand on tape
+            businessType.style.display = "none";
+            showOfficialTypes.innerHTML =
+              "<small>Voir les types officiels Google Places</small>";
+          }
+        });
+
+        // Gestion de la sélection dans la liste officielle
+        businessType.addEventListener("change", function () {
+          if (this.value) {
+            businessSearch.value = this.value;
+            addToSearchHistory(this.value);
+          }
+        });
+
+        // Gestion de la soumission du formulaire avec le nouveau champ
+        document
+          .getElementById("scrapingForm")
+          .addEventListener("submit", function (event) {
+            const searchValue = businessSearch.value.trim();
+            if (searchValue) {
+              // Utiliser la valeur du champ de recherche
+              document.getElementById("businessType").value = searchValue;
+            }
+          });
+      }
+
+      // Charger l'historique des recherches
+      function loadSearchHistory() {
+        const history = JSON.parse(
+          localStorage.getItem("searchHistory") || "[]"
+        );
+        const historyItems = document.getElementById("historyItems");
+        const searchHistory = document.getElementById("searchHistory");
+
+        if (history.length > 0) {
+          searchHistory.style.display = "block";
+          historyItems.innerHTML = "";
+
+          history.slice(0, 5).forEach((term) => {
+            const historyBtn = document.createElement("button");
+            historyBtn.type = "button";
+            historyBtn.className =
+              "btn btn-sm btn-outline-secondary history-btn";
+            historyBtn.textContent = term;
+            historyBtn.addEventListener("click", function () {
+              document.getElementById("businessSearch").value = term;
+              document.getElementById("businessSearch").focus();
+            });
+            historyItems.appendChild(historyBtn);
+          });
+        }
+      }
+
+      // Ajouter un terme à l'historique
+      function addToSearchHistory(term) {
+        if (!term.trim()) return;
+
+        let history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+
+        // Retirer le terme s'il existe déjà
+        history = history.filter((item) => item !== term);
+
+        // Ajouter au début
+        history.unshift(term);
+
+        // Garder seulement les 10 derniers
+        history = history.slice(0, 10);
+
+        localStorage.setItem("searchHistory", JSON.stringify(history));
+        loadSearchHistory();
+      }
+
+      // Gérer la soumission du formulaire de scraping
+      async function handleScrapingSubmit(event) {
+        event.preventDefault();
+
+        // Récupérer la valeur du champ de recherche
+        const searchValue = document
+          .getElementById("businessSearch")
+          .value.trim();
+        const officialType = document.getElementById("businessType").value;
+
+        // Utiliser la valeur de recherche si disponible, sinon la valeur officielle
+        const businessType = searchValue || officialType;
+
+        const formData = {
+          location: document.getElementById("location").value,
+          business_type: businessType,
+          radius: parseInt(document.getElementById("radius").value) * 1000, // Convertir en mètres
+          max_results: parseInt(document.getElementById("maxResults").value),
+          min_rating: parseFloat(document.getElementById("minRating").value),
+          min_reviews: parseInt(document.getElementById("minReviews").value),
+          anti_hotels: document.getElementById("antiHotels").checked ? 1 : 0,
+          wide_search: document.getElementById("wideSearch").checked ? 1 : 0,
+        };
+
+        // Ajouter à l'historique si c'est une recherche libre
+        if (searchValue) {
+          addToSearchHistory(searchValue);
+        }
+
+        showLoading(true);
+
+        try {
+          const response = await fetch("/api/start-scraping-smart", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showAlert(
+              "success",
+              `Scraping terminé avec succès ! ${
+                result.leads_created
+              } leads créés. Coût: $${result.api_cost.toFixed(4)}`
+            );
+            loadLeads();
+          } else {
+            showAlert("danger", `Erreur: ${result.message}`);
+          }
+        } catch (error) {
+          showAlert("danger", `Erreur de connexion: ${error.message}`);
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      // Gérer la suggestion de zones
+      async function handleSuggestZones() {
+        const location = document.getElementById("location").value;
+        if (!location) {
+          showAlert("warning", "Veuillez d'abord saisir une localisation");
+          return;
+        }
+
+        try {
+          // Géocoder la localisation
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ address: location }, async (results, status) => {
+            if (status === "OK") {
+              const lat = results[0].geometry.location.lat();
+              const lng = results[0].geometry.location.lng();
+
+              // Récupérer la valeur du champ de recherche
+              const searchValue = document
+                .getElementById("businessSearch")
+                .value.trim();
+              const officialType =
+                document.getElementById("businessType").value;
+              const businessType = searchValue || officialType;
+
+              const response = await fetch("/api/zones/suggest", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  latitude: lat,
+                  longitude: lng,
+                  area_km2: 100,
+                  business_type: businessType,
+                }),
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                showAlert("info", `${data.count} zones suggérées`);
+                // Ici vous pourriez afficher les zones suggérées sur la carte
+              } else {
+                showAlert("danger", `Erreur: ${data.message}`);
+              }
+            } else {
+              showAlert("danger", "Impossible de géocoder la localisation");
+            }
+          });
+        } catch (error) {
+          showAlert("danger", `Erreur: ${error.message}`);
+        }
+      }
+
+      // Utilitaires
+      function getStatusColor(status) {
+        switch (status) {
+          case "terminée":
+            return "success";
+          case "en_cours":
+            return "warning";
+          case "planifiée":
+            return "secondary";
+          case "erreur":
+            return "danger";
+          default:
+            return "primary";
+        }
+      }
+
+      function showLoading(show) {
+        document.getElementById("loading").style.display = show
+          ? "block"
+          : "none";
+      }
+
+      function showAlert(type, message) {
+        const alertDiv = document.createElement("div");
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+        document
+          .querySelector(".sidebar")
+          .insertBefore(alertDiv, document.querySelector(".control-panel"));
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+          alertDiv.remove();
+        }, 5000);
+      }
+
+      function centerMapOnZone(zone) {
+        const position = { lat: zone.latitude, lng: zone.longitude };
+        map.setCenter(position);
+        map.setZoom(13);
+      }
+
+      function clearMap() {
+        leadMarkers.forEach((marker) => marker.setMap(null));
+        circles.forEach((circle) => circle.setMap(null));
+        leadMarkers = [];
+        circles = [];
+
+        if (currentInfoWindow) {
+          currentInfoWindow.close();
+          currentInfoWindow = null;
+        }
+      }
+
+      async function reverseGeocode(lat, lng) {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === "OK") {
+            document.getElementById("location").value =
+              results[0].formatted_address;
+          }
+        });
+      }
+
+      // Afficher la légende
+      function showLegend() {
+        const legend = document.getElementById("mapLegend");
+        const content = document.getElementById("legendContent");
+
+        // Générer le contenu de la légende
+        const activities = [
+          ...new Set(leads.map((lead) => lead.business_type || "other")),
+        ].sort();
+        const colorPalette = [
+          "#e6194b",
+          "#3cb44b",
+          "#ffe119",
+          "#4363d8",
+          "#f58231",
+          "#911eb4",
+          "#46f0f0",
+          "#f032e6",
+          "#bcf60c",
+          "#fabebe",
+          "#008080",
+          "#e6beff",
+          "#9a6324",
+          "#fffac8",
+          "#800000",
+          "#aaffc3",
+          "#808000",
+          "#ffd8b1",
+          "#000075",
+          "#808080",
+        ];
+
+        let legendHTML = "";
+        activities.forEach((activity, idx) => {
+          const color = colorPalette[idx % colorPalette.length];
+          const count = leads.filter(
+            (lead) => (lead.business_type || "other") === activity
+          ).length;
+          const businessTypeFr = translateBusinessType(activity);
+          legendHTML += `
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: ${color}"></div>
+              <span>${businessTypeFr} (${count})</span>
+            </div>
+          `;
+        });
+
+        content.innerHTML = legendHTML;
+        legend.style.display = "block";
+      }
+
+      // Masquer la légende
+      function hideLegend() {
+        document.getElementById("mapLegend").style.display = "none";
+      }
+    </script>
+  </body>
+</html>

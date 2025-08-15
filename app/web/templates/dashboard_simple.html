@@ -1,0 +1,244 @@
+{% extends "base.html" %} {% block title %}Dashboard Simple - La Station
+Prospection{% endblock %} {% block page_title %}Dashboard Simple{% endblock %}
+{% block page_actions %}
+<!-- Suppression de tout bouton ou formulaire de scraping ici -->
+{% endblock %} {% block content %}
+<!-- Zone de debug -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><i class="fas fa-bug"></i> Zone de Debug</h5>
+  </div>
+  <div class="card-body">
+    <div id="debugZone">
+      <p class="text-muted">Cliquez sur "Tester API" pour commencer...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des leads -->
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0"><i class="fas fa-list"></i> Leads</h5>
+  </div>
+  <div class="card-body">
+    <div id="leadsContainer">
+      <p class="text-muted">Aucun lead chargé</p>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  // Variables globales
+  let leadsData = [];
+
+  // Initialisation
+  $(document).ready(function () {
+    console.log("Dashboard simple initialisé");
+    addDebugMessage("Page chargée avec succès");
+
+    // Vérifier jQuery
+    if (typeof $ === "undefined") {
+      addDebugMessage("ERREUR: jQuery n'est pas chargé !", "danger");
+      return;
+    }
+
+    addDebugMessage("jQuery disponible - version: " + $.fn.jquery);
+
+    // Test automatique après 2 secondes
+    setTimeout(function () {
+      testAPI();
+    }, 2000);
+  });
+
+  // Fonction pour ajouter des messages de debug
+  function addDebugMessage(message, type = "info") {
+    const timestamp = new Date().toLocaleTimeString();
+    const alertClass =
+      type === "danger"
+        ? "alert-danger"
+        : type === "success"
+        ? "alert-success"
+        : type === "warning"
+        ? "alert-warning"
+        : "alert-info";
+
+    const messageHtml = `
+      <div class="alert ${alertClass} alert-sm">
+        <small>[${timestamp}] ${message}</small>
+      </div>
+    `;
+
+    $("#debugZone").append(messageHtml);
+
+    // Garder seulement les 10 derniers messages
+    const messages = $("#debugZone .alert");
+    if (messages.length > 10) {
+      messages.first().remove();
+    }
+  }
+
+  // Tester l'API
+  function testAPI() {
+    addDebugMessage("Test de l'API en cours...");
+
+    // Test 1: Statut
+    $.ajax({
+      url: "/api/status",
+      method: "GET",
+      timeout: 5000,
+      success: function (response) {
+        addDebugMessage(
+          "✅ API Status OK: " + JSON.stringify(response),
+          "success"
+        );
+      },
+      error: function (xhr, status, error) {
+        addDebugMessage(
+          "❌ Erreur API Status: " + status + " - " + error,
+          "danger"
+        );
+      },
+    });
+
+    // Test 2: Leads
+    $.ajax({
+      url: "/api/leads?limit=3",
+      method: "GET",
+      timeout: 10000,
+      success: function (response) {
+        addDebugMessage(
+          "✅ API Leads OK: " + response.count + " leads trouvés",
+          "success"
+        );
+        leadsData = response.leads;
+        displayLeadsSimple(leadsData);
+      },
+      error: function (xhr, status, error) {
+        addDebugMessage(
+          "❌ Erreur API Leads: " + status + " - " + error,
+          "danger"
+        );
+      },
+    });
+
+    // Test 3: Types d'entreprises
+    $.ajax({
+      url: "/api/business-types",
+      method: "GET",
+      timeout: 5000,
+      success: function (response) {
+        addDebugMessage(
+          "✅ API Business Types OK: " +
+            response.business_types.length +
+            " types",
+          "success"
+        );
+      },
+      error: function (xhr, status, error) {
+        addDebugMessage(
+          "❌ Erreur API Business Types: " + status + " - " + error,
+          "danger"
+        );
+      },
+    });
+  }
+
+  // Charger les leads (version simple)
+  function loadLeadsSimple() {
+    addDebugMessage("Chargement des leads...");
+
+    $("#leadsContainer").html(`
+      <div class="text-center py-4">
+        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+        <p class="text-muted mt-2">Chargement...</p>
+      </div>
+    `);
+
+    $.ajax({
+      url: "/api/leads?limit=10",
+      method: "GET",
+      timeout: 10000,
+      success: function (response) {
+        addDebugMessage(
+          "Leads chargés avec succès: " + response.count,
+          "success"
+        );
+        leadsData = response.leads;
+        displayLeadsSimple(leadsData);
+      },
+      error: function (xhr, status, error) {
+        addDebugMessage(
+          "Erreur lors du chargement: " + status + " - " + error,
+          "danger"
+        );
+        $("#leadsContainer").html(`
+          <div class="text-center py-4">
+            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+            <p class="text-muted mt-2">Erreur: ${status} - ${error}</p>
+            <button class="btn btn-primary mt-2" onclick="loadLeadsSimple()">
+              <i class="fas fa-sync-alt"></i> Réessayer
+            </button>
+          </div>
+        `);
+      },
+    });
+  }
+
+  // Afficher les leads (version simple)
+  function displayLeadsSimple(leads) {
+    if (!leads || leads.length === 0) {
+      $("#leadsContainer").html(`
+        <div class="text-center py-4">
+          <i class="fas fa-inbox fa-2x text-muted"></i>
+          <p class="text-muted mt-2">Aucun lead trouvé</p>
+        </div>
+      `);
+      return;
+    }
+
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += `
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Adresse</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+    `;
+
+    leads.forEach((lead) => {
+      const statusClass =
+        lead.statut_scraping === "succès"
+          ? "success"
+          : lead.statut_scraping === "erreur"
+          ? "danger"
+          : "warning";
+
+      html += `
+        <tr>
+          <td>${lead.id}</td>
+          <td><strong>${lead.nom}</strong></td>
+          <td>${lead.adresse || "N/A"}</td>
+          <td><span class="badge bg-${statusClass}">${
+        lead.statut_scraping
+      }</span></td>
+        </tr>
+      `;
+    });
+
+    html += "</tbody></table></div>";
+    $("#leadsContainer").html(html);
+  }
+</script>
+
+<style>
+  .alert-sm {
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}

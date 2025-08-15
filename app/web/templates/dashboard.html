@@ -1,0 +1,1319 @@
+{% extends "base.html" %} {% block title %}Dashboard - La Station Prospection{%
+endblock %} {% block page_title %}Dashboard{% endblock %} {% block page_actions
+%}
+<a href="/scraping-map" class="btn btn-success">
+  <i class="fas fa-map-marked-alt"></i> Interface Cartographique
+</a>
+<a href="/contacts" class="btn btn-primary">
+  <i class="fas fa-address-book"></i> Gestion des Contacts
+</a>
+<button class="btn btn-outline-secondary" onclick="debugInfo()">
+  <i class="fas fa-bug"></i> Debug
+</button>
+<button class="btn btn-outline-warning" onclick="recalculateScores()">
+  <i class="fas fa-calculator"></i> Recalculer Scores
+</button>
+{% endblock %} {% block content %}
+
+<!-- Statistiques -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-users fa-2x text-primary mb-2"></i>
+        <h5 class="card-title" id="totalLeads">0</h5>
+        <p class="card-text">Leads totaux</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+        <h5 class="card-title" id="successLeads">0</h5>
+        <p class="card-text">Scraping réussi</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-robot fa-2x text-info mb-2"></i>
+        <h5 class="card-title" id="aiSuccessLeads">0</h5>
+        <p class="card-text">Analyse IA réussie</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="fas fa-camera fa-2x text-warning mb-2"></i>
+        <h5 class="card-title" id="screenshotLeads">0</h5>
+        <p class="card-text">Captures d'écran</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Boutons pour mettre à jour les cookies Facebook et Instagram -->
+<div class="mb-3">
+  <button id="update-facebook-cookies-btn" class="btn btn-outline-primary mr-2">
+    <i class="fab fa-facebook"></i> Mettre à jour les cookies Facebook
+  </button>
+  <button id="update-instagram-cookies-btn" class="btn btn-outline-danger">
+    <i class="fab fa-instagram"></i> Mettre à jour les cookies Instagram
+  </button>
+</div>
+<!-- Modale d'instruction -->
+<div
+  class="modal fade"
+  id="cookiesModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="cookiesModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cookiesModalLabel">
+          Mise à jour des cookies
+        </h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="cookiesModalBody">
+        <!-- Instructions dynamiques -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ajout d'un encart pour le coût Google Cloud du mois -->
+<div id="gcp-billing" class="alert alert-info" style="display: none">
+  <strong>Coût Google Cloud ce mois-ci :</strong>
+  <span id="gcp-billing-value">...</span> €
+</div>
+
+<!-- Filtres et recherche -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3">
+        <label for="search-input" class="form-label">Recherche</label>
+        <input
+          type="text"
+          id="search-input"
+          class="form-control"
+          placeholder="Nom, adresse, téléphone..."
+        />
+      </div>
+      <div class="col-md-2">
+        <label for="business-type-filter" class="form-label">Domaine</label>
+        <select id="business-type-filter" class="form-select">
+          <option value="">Tous les domaines</option>
+          <option value="restaurant">Restaurants</option>
+          <option value="bar">Bars</option>
+          <option value="café">Cafés</option>
+          <option value="boulangerie">Boulangeries</option>
+          <option value="coiffeur">Coiffeurs</option>
+          <option value="pharmacie">Pharmacies</option>
+          <option value="médecin">Médecins</option>
+          <option value="dentiste">Dentistes</option>
+          <option value="avocat">Avocats</option>
+          <option value="comptable">Comptables</option>
+          <option value="garage">Garages</option>
+          <option value="plomberie">Plomberie</option>
+          <option value="électricien">Électriciens</option>
+          <option value="peintre">Peintres</option>
+          <option value="jardinier">Jardiniers</option>
+          <option value="nettoyage">Nettoyage</option>
+          <option value="sécurité">Sécurité</option>
+          <option value="transport">Transport</option>
+          <option value="autre">Autres</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="score-filter" class="form-label">Score</label>
+        <select id="score-filter" class="form-select">
+          <option value="">Tous les scores</option>
+          <option value="high">Élevé (≥80)</option>
+          <option value="medium">Moyen (40-79)</option>
+          <option value="low">Faible (<40)</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="status-filter" class="form-label">Statut</label>
+        <select id="status-filter" class="form-select">
+          <option value="">Tous les statuts</option>
+          <option value="succès">Succès</option>
+          <option value="erreur">Erreur</option>
+          <option value="en cours">En cours</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="sort-select" class="form-label">Trier par</label>
+        <select id="sort-select" class="form-select">
+          <option value="nom">Nom (A-Z)</option>
+          <option value="nom-desc">Nom (Z-A)</option>
+          <option value="score-desc">Score (élevé → faible)</option>
+          <option value="score">Score (faible → élevé)</option>
+          <option value="created-desc">Date (récent)</option>
+          <option value="created">Date (ancien)</option>
+        </select>
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button
+          class="btn btn-outline-secondary w-100"
+          onclick="clearFilters()"
+          title="Effacer tous les filtres"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des leads -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="fas fa-list"></i> Derniers Leads</h5>
+    <button class="btn btn-sm btn-outline-primary" onclick="loadLeads()">
+      <i class="fas fa-sync-alt"></i> Actualiser
+    </button>
+  </div>
+  <div class="card-body" id="leads-section">
+    <div id="leadsContainer">
+      <div class="text-center py-4">
+        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+        <p class="text-muted mt-2">Chargement des leads...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour les captures d'écran -->
+<div class="modal fade" id="screenshotModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Captures d'écran et analyse IA</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="screenshotContent">
+          <!-- Contenu dynamique -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  // Variables globales
+  let leadsData = [];
+  let businessTypes = [];
+  let isLoading = false;
+  let currentSort = { key: "", asc: true };
+
+  // Initialisation
+  $(document).ready(function () {
+    console.log("Dashboard initialisé");
+
+    // Vérifier que jQuery est chargé
+    if (typeof $ === "undefined") {
+      console.error("jQuery n'est pas chargé !");
+      showAlert("Erreur: jQuery n'est pas chargé", "danger");
+      return;
+    }
+
+    console.log("jQuery est disponible");
+
+    // Initialiser les composants avec gestion d'erreur
+    try {
+      // Charger les leads en premier
+      loadLeads();
+
+      // Charger les types d'entreprises en arrière-plan
+      setTimeout(function () {
+        loadBusinessTypes();
+      }, 1000);
+
+      // Vérifier le statut en arrière-plan
+      setTimeout(function () {
+        checkStatus();
+      }, 2000);
+
+      // Initialiser l'interface hybride
+      setupHybridInterface();
+
+      // Charger le coût Google Cloud du mois
+      fetch("/api/billing/month")
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            const cost = data.month_cost;
+            if (cost > 0) {
+              $("#gcp-billing-value").text(cost.toFixed(2));
+            } else {
+              $("#gcp-billing-value").text("0.00 (gratuit)");
+            }
+            $("#gcp-billing").show();
+          } else {
+            console.error("Erreur GCP billing:", data.error);
+            $("#gcp-billing-value").text("Erreur de récupération");
+            $("#gcp-billing").show();
+          }
+        })
+        .catch((error) => {
+          console.error("Erreur GCP billing:", error);
+          $("#gcp-billing-value").text("Erreur de récupération");
+          $("#gcp-billing").show();
+        });
+
+      // Gérer les boutons de mise à jour des cookies
+      $("#update-facebook-cookies-btn").on("click", function () {
+        $("#cookiesModalBody").html(
+          "<b>Pour mettre à jour les cookies Facebook :</b><br>1. Ouvre un terminal.<br>2. Lance la commande : <code>python update_facebook_cookies.py</code><br>3. Connecte-toi à Facebook dans la fenêtre qui s'ouvre.<br>4. Appuie sur Entrée dans le terminal quand tu es connecté.<br>5. Les cookies seront sauvegardés automatiquement."
+        );
+        $("#cookiesModal").modal("show");
+      });
+      $("#update-instagram-cookies-btn").on("click", function () {
+        $("#cookiesModalBody").html(
+          "<b>Pour mettre à jour les cookies Instagram :</b><br>1. Ouvre un terminal.<br>2. Lance la commande : <code>python update_instagram_cookies.py</code><br>3. Connecte-toi à Instagram dans la fenêtre qui s'ouvre.<br>4. Appuie sur Entrée dans le terminal quand tu es connecté.<br>5. Les cookies seront sauvegardés automatiquement."
+        );
+        $("#cookiesModal").modal("show");
+      });
+
+      console.log("Composants initialisés avec succès");
+    } catch (error) {
+      console.error("Erreur lors de l'initialisation:", error);
+      showAlert("Erreur lors de l'initialisation: " + error.message, "danger");
+    }
+  });
+
+  // Fonction de debug
+  function debugInfo() {
+    const debugInfo = {
+      "jQuery version": $.fn.jquery,
+      "Leads chargés": leadsData.length,
+      "Types d'entreprises": businessTypes.length,
+      "URL actuelle": window.location.href,
+      "User Agent": navigator.userAgent,
+      "État de chargement": isLoading,
+    };
+
+    console.log("=== DEBUG INFO ===");
+    Object.entries(debugInfo).forEach(([key, value]) => {
+      console.log(`${key}: ${value}`);
+    });
+
+    showAlert("Informations de debug affichées dans la console (F12)", "info");
+  }
+
+  // Fonctions de navigation
+  function showScrapingForm() {
+    $("#scrapingForm").show();
+  }
+
+  function hideScrapingForm() {
+    $("#scrapingForm").hide();
+  }
+
+  function showStatus() {
+    checkStatus();
+  }
+
+  // Charger les types d'entreprises
+  function loadBusinessTypes() {
+    console.log("Chargement des types d'entreprises...");
+
+    $.ajax({
+      url: "/api/business-types",
+      method: "GET",
+      timeout: 5000,
+      success: function (response) {
+        console.log("Types d'entreprises reçus:", response);
+        if (response.success) {
+          businessTypes = response.business_types;
+          populateBusinessTypes();
+          console.log(`${businessTypes.length} types d'entreprises chargés`);
+        } else {
+          console.error(
+            "Erreur lors du chargement des types d'entreprises:",
+            response.message
+          );
+          showAlert(
+            "Erreur lors du chargement des types d'entreprises: " +
+              response.message,
+            "warning"
+          );
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error(
+          "Erreur de connexion lors du chargement des types d'entreprises:",
+          status,
+          error
+        );
+        showAlert(
+          "Erreur de connexion lors du chargement des types d'entreprises",
+          "warning"
+        );
+      },
+    });
+  }
+
+  // Peupler le select des types d'entreprises
+  function populateBusinessTypes() {
+    const select = $("#businessType");
+    select.empty();
+    select.append('<option value="">Tous types</option>');
+
+    businessTypes.forEach((type) => {
+      select.append(`<option value="${type.value}">${type.label}</option>`);
+    });
+  }
+
+  // Configuration de l'interface hybride
+  function setupHybridInterface() {
+    // Charger l'historique depuis localStorage
+    loadSearchHistory();
+
+    // Gestion des suggestions populaires
+    $(".suggestion-btn").on("click", function () {
+      const term = $(this).data("term");
+      $("#businessSearch").val(term);
+      addToSearchHistory(term);
+      $("#businessSearch").focus();
+    });
+
+    // Gestion de l'affichage des types officiels
+    $("#showOfficialTypes").on("click", function () {
+      const businessType = $("#businessType");
+      if (businessType.is(":hidden")) {
+        businessType.show();
+        $(this).html("<small>Masquer les types officiels</small>");
+      } else {
+        businessType.hide();
+        $(this).html("<small>Voir les types officiels Google Places</small>");
+      }
+    });
+
+    // Gestion de la saisie dans le champ de recherche
+    $("#businessSearch").on("input", function () {
+      const value = $(this).val().trim();
+      if (value.length > 0) {
+        // Masquer les types officiels quand on tape
+        $("#businessType").hide();
+        $("#showOfficialTypes").html(
+          "<small>Voir les types officiels Google Places</small>"
+        );
+      }
+    });
+
+    // Gestion de la sélection dans la liste officielle
+    $("#businessType").on("change", function () {
+      if ($(this).val()) {
+        $("#businessSearch").val($(this).val());
+        addToSearchHistory($(this).val());
+      }
+    });
+  }
+
+  // Charger l'historique des recherches
+  function loadSearchHistory() {
+    const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+    const historyItems = $("#historyItems");
+    const searchHistory = $("#searchHistory");
+
+    if (history.length > 0) {
+      searchHistory.show();
+      historyItems.empty();
+
+      history.slice(0, 5).forEach((term) => {
+        const historyBtn = $("<button>")
+          .attr("type", "button")
+          .addClass("btn btn-sm btn-outline-secondary history-btn")
+          .text(term)
+          .on("click", function () {
+            $("#businessSearch").val(term).focus();
+          });
+        historyItems.append(historyBtn);
+      });
+    }
+  }
+
+  // Ajouter un terme à l'historique
+  function addToSearchHistory(term) {
+    if (!term.trim()) return;
+
+    let history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+
+    // Retirer le terme s'il existe déjà
+    history = history.filter((item) => item !== term);
+
+    // Ajouter au début
+    history.unshift(term);
+
+    // Garder seulement les 10 derniers
+    history = history.slice(0, 10);
+
+    localStorage.setItem("searchHistory", JSON.stringify(history));
+    loadSearchHistory();
+  }
+
+  // Variables globales pour les filtres
+  let allLeads = [];
+  let filteredLeads = [];
+
+  // Fonction de filtrage des leads
+  function filterLeads() {
+    const searchTerm = $("#search-input").val().toLowerCase();
+    const businessTypeFilter = $("#business-type-filter").val();
+    const scoreFilter = $("#score-filter").val();
+    const statusFilter = $("#status-filter").val();
+    const sortBy = $("#sort-select").val();
+
+    console.log("Filtrage des leads:", {
+      searchTerm,
+      businessTypeFilter,
+      scoreFilter,
+      statusFilter,
+      sortBy
+    });
+
+    filteredLeads = allLeads.filter((lead) => {
+      // Filtre par recherche
+      if (searchTerm) {
+        const searchFields = [
+          lead.nom,
+          lead.adresse,
+          lead.telephone,
+          lead.email,
+          lead.business_type,
+        ]
+          .filter((field) => field)
+          .join(" ")
+          .toLowerCase();
+
+        if (!searchFields.includes(searchTerm)) return false;
+      }
+
+      // Filtre par domaine
+      if (businessTypeFilter && lead.business_type !== businessTypeFilter)
+        return false;
+
+      // Filtre par score
+      if (scoreFilter) {
+        const scoreToUse = lead.score_ia !== null && lead.score_ia !== undefined
+          ? lead.score_ia
+          : lead.score_opportunite || 0;
+        
+        if (scoreFilter === "high" && scoreToUse < 80) return false;
+        if (scoreFilter === "medium" && (scoreToUse < 40 || scoreToUse >= 80))
+          return false;
+        if (scoreFilter === "low" && scoreToUse >= 40) return false;
+      }
+
+      // Filtre par statut
+      if (statusFilter && lead.statut_scraping !== statusFilter)
+        return false;
+
+      return true;
+    });
+
+    // Appliquer le tri
+    if (sortBy) {
+      filteredLeads.sort((a, b) => {
+        switch (sortBy) {
+          case "nom":
+            return (a.nom || "").localeCompare(b.nom || "");
+          case "nom-desc":
+            return (b.nom || "").localeCompare(a.nom || "");
+          case "score-desc":
+            const scoreA = a.score_ia !== null && a.score_ia !== undefined
+              ? a.score_ia
+              : a.score_opportunite || 0;
+            const scoreB = b.score_ia !== null && b.score_ia !== undefined
+              ? b.score_ia
+              : b.score_opportunite || 0;
+            return scoreB - scoreA;
+          case "score":
+            const scoreA2 = a.score_ia !== null && a.score_ia !== undefined
+              ? a.score_ia
+              : a.score_opportunite || 0;
+            const scoreB2 = b.score_ia !== null && b.score_ia !== undefined
+              ? b.score_ia
+              : b.score_opportunite || 0;
+            return scoreA2 - scoreB2;
+          case "created-desc":
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+          case "created":
+            return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    console.log(`Filtrage terminé: ${filteredLeads.length} leads affichés sur ${allLeads.length} total`);
+    displayLeads(filteredLeads);
+    updateStats(filteredLeads);
+  }
+
+  // Fonction pour effacer tous les filtres
+  function clearFilters() {
+    $("#search-input").val("");
+    $("#business-type-filter").val("");
+    $("#score-filter").val("");
+    $("#status-filter").val("");
+    $("#sort-select").val("nom");
+    filterLeads();
+  }
+
+  // Event listeners pour les filtres
+  $(document).ready(function () {
+    $("#search-input").on("input", filterLeads);
+    $("#business-type-filter").on("change", filterLeads);
+    $("#score-filter").on("change", filterLeads);
+    $("#status-filter").on("change", filterLeads);
+    $("#sort-select").on("change", filterLeads);
+  });
+
+  // Charger les leads
+  function loadLeads() {
+    if (isLoading) {
+      console.log("Chargement déjà en cours, ignoré");
+      return;
+    }
+
+    isLoading = true;
+    console.log("Début du chargement des leads...");
+
+    $("#leadsContainer").html(`
+            <div class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                <p class="text-muted mt-2">Chargement des leads...</p>
+            </div>
+        `);
+
+    $.ajax({
+      url: "/api/leads",
+      method: "GET",
+      timeout: 10000, // Timeout de 10 secondes
+      success: function (response) {
+        console.log("Réponse API leads:", response);
+        isLoading = false;
+
+        if (response.success) {
+          allLeads = response.leads;
+          filteredLeads = [...allLeads];
+          filterLeads(); // Appliquer les filtres actuels
+          console.log(`${allLeads.length} leads chargés`);
+        } else {
+          console.error("Erreur API leads:", response.message);
+          $("#leadsContainer").html(`
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                            <p class="text-muted mt-2">Erreur: ${response.message}</p>
+                            <button class="btn btn-primary mt-2" onclick="loadLeads()">
+                                <i class="fas fa-sync-alt"></i> Réessayer
+                            </button>
+                        </div>
+                    `);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error("Erreur lors du chargement des leads:", status, error);
+        isLoading = false;
+
+        let errorMessage = "Erreur de connexion";
+
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+          errorMessage = xhr.responseJSON.message;
+        } else if (status === "timeout") {
+          errorMessage = "Délai d'attente dépassé";
+        } else if (status === "error") {
+          errorMessage = "Erreur réseau";
+        }
+
+        $("#leadsContainer").html(`
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        <p class="text-muted mt-2">Erreur: ${errorMessage}</p>
+                        <button class="btn btn-primary mt-2" onclick="loadLeads()">
+                            <i class="fas fa-sync-alt"></i> Réessayer
+                        </button>
+                    </div>
+                `);
+      },
+    });
+  }
+
+  // Afficher les leads
+  function displayLeads(leads) {
+    if (leads.length === 0) {
+      $("#leadsContainer").html(
+        '<div class="alert alert-info">Aucun lead trouvé</div>'
+      );
+      return;
+    }
+
+    let html = '<div class="row">';
+
+    leads.forEach(function (lead) {
+      // Déterminer la couleur du badge selon le score (utiliser score_ia en priorité)
+      const scoreToUse =
+        lead.score_ia !== null && lead.score_ia !== undefined
+          ? lead.score_ia
+          : lead.score_opportunite;
+
+      let scoreClass = "secondary";
+      if (scoreToUse >= 80) scoreClass = "success";
+      else if (scoreToUse >= 60) scoreClass = "info";
+      else if (scoreToUse >= 40) scoreClass = "warning";
+      else if (scoreToUse >= 20) scoreClass = "danger";
+
+      const scoreText =
+        scoreToUse !== null && scoreToUse !== undefined
+          ? Math.round(scoreToUse) + "/100"
+          : "N/A";
+
+      html += `
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card h-100 lead-card">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="card-title mb-0 text-truncate" title="${lead.nom}">
+                  <i class="fas fa-building text-primary me-2"></i>
+                  ${lead.nom}
+                </h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewLeadDetails(${lead.id})" title="Voir les détails">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <div class="mt-auto">
+                <span class="badge bg-${scoreClass} fs-6">
+                  <i class="fas fa-chart-line me-1"></i>
+                  ${scoreText}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    html += "</div>";
+    $("#leadsContainer").html(html);
+  }
+
+  // Mettre à jour les statistiques
+  function updateStats(leads) {
+    $("#totalLeads").text(leads.length);
+    $("#successLeads").text(
+      leads.filter((l) => l.statut_scraping === "succès").length
+    );
+    $("#aiSuccessLeads").text(
+      leads.filter((l) => l.ai_extraction_status === "succès").length
+    );
+    $("#screenshotLeads").text(
+      leads.filter(
+        (l) => l.facebook_screenshot_path || l.instagram_screenshot_path
+      ).length
+    );
+  }
+
+  // Voir les détails d'un lead
+  function viewLeadDetails(leadId) {
+    $.ajax({
+      url: `/api/lead/${leadId}`,
+      method: "GET",
+      success: function (response) {
+        if (response.success) {
+          showLeadModal(response.lead);
+        } else {
+          showAlert(`Erreur: ${response.message}`, "danger");
+        }
+      },
+      error: function (xhr) {
+        const response = xhr.responseJSON || {};
+        showAlert(
+          `Erreur: ${response.message || "Erreur de connexion"}`,
+          "danger"
+        );
+      },
+    });
+  }
+
+  // Afficher la modal de détails
+  function showLeadModal(lead) {
+    const modal = `
+            <div class="modal fade" id="leadModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Détails du Lead: ${
+                              lead.nom
+                            }</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <div class="row">
+                            <div class="col-12">
+                              
+                              <!-- 1. INFOS DE BASE -->
+                              <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                  <h6 class="mb-0"><i class="fas fa-info-circle"></i> Infos de Base</h6>
+                                </div>
+                                <div class="card-body">
+                                  <div class="row">
+                                    <div class="col-md-6">
+                                      <p><strong>Nom:</strong> ${
+                                        lead.nom || "Non renseigné"
+                                      }</p>
+                                      
+                                      <!-- Emails de toutes les sources -->
+                                      <div class="mb-2">
+                                        <strong>Emails:</strong>
+                                        <ul class="list-unstyled ms-3">
+                                          ${
+                                            lead.email
+                                              ? `<li><i class="fas fa-envelope text-primary"></i> Base: ${lead.email}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.google_maps_email
+                                              ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_email}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.site_web_email
+                                              ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_email}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            !lead.email &&
+                                            !lead.google_maps_email &&
+                                            !lead.site_web_email
+                                              ? '<li class="text-muted">Aucun email trouvé</li>'
+                                              : ""
+                                          }
+                                        </ul>
+                                      </div>
+                                      
+                                      <!-- Téléphones de toutes les sources -->
+                                      <div class="mb-2">
+                                        <strong>Téléphones:</strong>
+                                        <ul class="list-unstyled ms-3">
+                                          ${
+                                            lead.telephone
+                                              ? `<li><i class="fas fa-phone text-primary"></i> Base: ${lead.telephone}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.google_maps_telephone
+                                              ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_telephone}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.site_web_telephone
+                                              ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_telephone}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            !lead.telephone &&
+                                            !lead.google_maps_telephone &&
+                                            !lead.site_web_telephone
+                                              ? '<li class="text-muted">Aucun téléphone trouvé</li>'
+                                              : ""
+                                          }
+                                        </ul>
+                                      </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <!-- Adresses de toutes les sources -->
+                                      <div class="mb-2">
+                                        <strong>Adresses:</strong>
+                                        <ul class="list-unstyled ms-3">
+                                          ${
+                                            lead.adresse
+                                              ? `<li><i class="fas fa-map-marker-alt text-primary"></i> Base: ${lead.adresse}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.google_maps_adresse
+                                              ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_adresse}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            lead.site_web_adresse
+                                              ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_adresse}</li>`
+                                              : ""
+                                          }
+                                          ${
+                                            !lead.adresse &&
+                                            !lead.google_maps_adresse &&
+                                            !lead.site_web_adresse
+                                              ? '<li class="text-muted">Aucune adresse trouvée</li>'
+                                              : ""
+                                          }
+                                        </ul>
+                                      </div>
+                                      
+                                      <p><strong>Note Google:</strong> ${
+                                        lead.note_google || "Non renseignée"
+                                      }</p>
+                                      <p><strong>Nombre d'avis:</strong> ${
+                                        lead.nb_avis_google || "Non renseigné"
+                                      }</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- 2. INFOS GOOGLE MAPS -->
+                              <div class="card mb-3">
+                                <div class="card-header bg-success text-white">
+                                  <h6 class="mb-0"><i class="fab fa-google"></i> Infos Google Maps</h6>
+                                </div>
+                                <div class="card-body">
+                                  <div class="row">
+                                    <div class="col-md-6">
+                                      <p><strong>Email:</strong> ${
+                                        lead.google_maps_email || "Non trouvé"
+                                      }</p>
+                                      <p><strong>Téléphone:</strong> ${
+                                        lead.google_maps_telephone ||
+                                        "Non trouvé"
+                                      }</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <p><strong>Adresse:</strong> ${
+                                        lead.google_maps_adresse ||
+                                        "Non trouvée"
+                                      }</p>
+                                      <p><strong>Site web:</strong> ${
+                                        lead.site_web
+                                          ? `<a href="${lead.site_web}" target="_blank">${lead.site_web}</a>`
+                                          : "Non trouvé"
+                                      }</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- 3. SITE WEB -->
+                              <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                  <h6 class="mb-0"><i class="fas fa-globe"></i> Site Web (Analyse IA)</h6>
+                                </div>
+                                <div class="card-body">
+                                  <div class="row">
+                                    <div class="col-md-6">
+                                      <p><strong>Email:</strong> ${
+                                        lead.site_web_email || "Non trouvé"
+                                      }</p>
+                                      <p><strong>Téléphone:</strong> ${
+                                        lead.site_web_telephone || "Non trouvé"
+                                      }</p>
+                                      <p><strong>Adresse:</strong> ${
+                                        lead.site_web_adresse || "Non trouvée"
+                                      }</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <p><strong>Description:</strong> ${
+                                        lead.site_web_description ||
+                                        "Non trouvée"
+                                      }</p>
+                                      <p><strong>Horaires:</strong> ${
+                                        lead.site_web_horaires || "Non trouvés"
+                                      }</p>
+                                      <p><strong>Services:</strong> ${
+                                        lead.site_web_services || "Non trouvés"
+                                      }</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- 4. INSTAGRAM ET FACEBOOK -->
+                              <div class="card mb-3">
+                                <div class="card-header bg-warning text-dark">
+                                  <h6 class="mb-0"><i class="fas fa-share-alt"></i> Instagram et Facebook</h6>
+                                </div>
+                                <div class="card-body">
+                                  <div class="row">
+                                    <div class="col-md-6">
+                                      <h6 class="text-primary">📘 Facebook</h6>
+                                      <p><strong>URL:</strong> ${
+                                        lead.facebook_url
+                                          ? `<a href="${lead.facebook_url}" target="_blank">${lead.facebook_url}</a>`
+                                          : "Non trouvé"
+                                      }</p>
+                                      
+                                      <p><strong>Statistiques:</strong></p>
+                                      <ul class="list-unstyled ms-3">
+                                        <li>📊 Followers: ${
+                                          lead.nb_followers_facebook !== null &&
+                                          lead.nb_followers_facebook !==
+                                            undefined
+                                            ? formatNumber(
+                                                lead.nb_followers_facebook
+                                              )
+                                            : "N/A"
+                                        }</li>
+                                        <li>❤️ Likes: ${
+                                          lead.nb_likes_facebook !== null &&
+                                          lead.nb_likes_facebook !== undefined
+                                            ? formatNumber(
+                                                lead.nb_likes_facebook
+                                              )
+                                            : "N/A"
+                                        }</li>
+                                      </ul>
+                                      
+                                      <p><strong>Description:</strong></p>
+                                      <p class="text-muted ms-3">${
+                                        lead.intro_facebook || "Non disponible"
+                                      }</p>
+                                      
+                                      <p><strong>Informations:</strong></p>
+                                      <ul class="list-unstyled ms-3">
+                                        <li>📞 Téléphone: ${
+                                          lead.facebook_telephone ||
+                                          "Non disponible"
+                                        }</li>
+                                        <li>📧 Email: ${
+                                          lead.facebook_email ||
+                                          "Non disponible"
+                                        }</li>
+                                        <li>📍 Adresse: ${
+                                          lead.facebook_adresse ||
+                                          "Non disponible"
+                                        }</li>
+                                        <li>🌐 Site web: ${
+                                          lead.facebook_site_web ||
+                                          "Non disponible"
+                                        }</li>
+                                      </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <h6 class="text-danger">📷 Instagram</h6>
+                                      <p><strong>URL:</strong> ${
+                                        lead.instagram_url
+                                          ? `<a href="${lead.instagram_url}" target="_blank">${lead.instagram_url}</a>`
+                                          : "Non trouvé"
+                                      }</p>
+                                      
+                                      <p><strong>Statistiques:</strong></p>
+                                      <ul class="list-unstyled ms-3">
+                                        <li>📸 Posts: ${
+                                          lead.nb_posts_instagram !== null &&
+                                          lead.nb_posts_instagram !== undefined
+                                            ? formatNumber(
+                                                lead.nb_posts_instagram
+                                              )
+                                            : "N/A"
+                                        }</li>
+                                        <li>📊 Followers: ${
+                                          lead.nb_followers_instagram !==
+                                            null &&
+                                          lead.nb_followers_instagram !==
+                                            undefined
+                                            ? formatNumber(
+                                                lead.nb_followers_instagram
+                                              )
+                                            : "N/A"
+                                        }</li>
+                                        <li>👥 Following: ${
+                                          lead.nb_following_instagram !==
+                                            null &&
+                                          lead.nb_following_instagram !==
+                                            undefined
+                                            ? formatNumber(
+                                                lead.nb_following_instagram
+                                              )
+                                            : "N/A"
+                                        }</li>
+                                      </ul>
+                                      
+                                      <p><strong>Bio:</strong></p>
+                                      <p class="text-muted ms-3">${
+                                        lead.bio_instagram || "Non disponible"
+                                      }</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- 5. SCORING IA -->
+                              <div class="card mb-3">
+                                <div class="card-header bg-dark text-white">
+                                  <h6 class="mb-0"><i class="fas fa-robot"></i> Scoring IA</h6>
+                                </div>
+                                <div class="card-body">
+                                  <div class="row">
+                                    <div class="col-md-6">
+                                      <p><strong>Score:</strong> ${
+                                        lead.score_ia
+                                          ? `${lead.score_ia}/100`
+                                          : "Non calculé"
+                                      }</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <p><strong>Argumentaire:</strong> ${
+                                        lead.argumentaire_ia || "Non généré"
+                                      }</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+                        </div>
+        `;
+
+    // Supprimer l'ancienne modal si elle existe
+    $("#leadModal").remove();
+
+    // Ajouter et afficher la nouvelle modal
+    $("body").append(modal);
+    new bootstrap.Modal(document.getElementById("leadModal")).show();
+
+    let instagramHtml = "";
+    if (lead.instagram_url) {
+      instagramHtml += `<p><strong>URL:</strong> <a href="${lead.instagram_url}" target="_blank">${lead.instagram_url}</a></p>`;
+    } else if (lead.instagram_handle) {
+      instagramHtml += `<p><strong>Handle:</strong> @${lead.instagram_handle}</p>`;
+    }
+    instagramHtml += `<p><strong>Posts:</strong> ${
+      lead.nb_posts_instagram !== null && lead.nb_posts_instagram !== undefined
+        ? formatNumber(lead.nb_posts_instagram)
+        : "N/A"
+    }</p>`;
+    instagramHtml += `<p><strong>Followers:</strong> ${
+      lead.nb_followers_instagram !== null &&
+      lead.nb_followers_instagram !== undefined
+        ? formatNumber(lead.nb_followers_instagram)
+        : "N/A"
+    }</p>`;
+    instagramHtml += `<p><strong>Following:</strong> ${
+      lead.nb_following_instagram !== null &&
+      lead.nb_following_instagram !== undefined
+        ? formatNumber(lead.nb_following_instagram)
+        : "N/A"
+    }</p>`;
+    instagramHtml += `<p><strong>Bio:</strong> <span class="text-muted">${
+      lead.bio_instagram ? lead.bio_instagram : "N/A"
+    }</span></p>`;
+    if (
+      !lead.instagram_url &&
+      !lead.instagram_handle &&
+      !lead.nb_posts_instagram &&
+      !lead.nb_followers_instagram &&
+      !lead.nb_following_instagram &&
+      !lead.bio_instagram
+    ) {
+      instagramHtml = '<p class="text-muted">Non disponible</p>';
+    }
+    $("#instagramBlock").html(instagramHtml);
+  }
+
+  // Vérifier le statut de l'application
+  function checkStatus() {
+    $.ajax({
+      url: "/api/status",
+      method: "GET",
+      success: function (response) {
+        if (response.success) {
+          console.log("Application en cours d'exécution");
+        } else {
+          console.error(`Erreur de statut: ${response.message}`);
+        }
+      },
+      error: function () {
+        console.error("Impossible de vérifier le statut de l'application");
+      },
+    });
+  }
+
+  // Ajout de la fonction utilitaire formatNumber pour éviter les erreurs
+  function formatNumber(num) {
+    if (num === null || num === undefined) return "N/A";
+    return num.toLocaleString("fr-FR");
+  }
+
+  // Fonction pour afficher les captures d'écran d'un lead
+  function showScreenshots(leadId) {
+    const lead = leadsData.find((l) => l.id === leadId);
+    if (!lead) {
+      showAlert("Lead non trouvé", "danger");
+      return;
+    }
+
+    let content = `<div class="row">`;
+
+    // Facebook
+    if (lead.facebook_url) {
+      content += `
+        <div class="col-md-6">
+          <h6><i class="fab fa-facebook text-primary"></i> Facebook</h6>
+          <div class="mb-3">
+            <a href="${
+              lead.facebook_url
+            }" target="_blank" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-external-link-alt"></i> Voir le profil
+            </a>
+            <button class="btn btn-sm btn-success" onclick="captureScreenshot(${leadId}, 'facebook')">
+              <i class="fas fa-camera"></i> Capturer
+            </button>
+            <button class="btn btn-sm btn-info" onclick="analyzeScreenshot(${leadId}, 'facebook')">
+              <i class="fas fa-robot"></i> Analyser IA
+            </button>
+          </div>
+          ${
+            lead.facebook_screenshot_path
+              ? `<img src="/api/lead/${leadId}/screenshot/facebook" class="img-fluid border" alt="Capture Facebook">`
+              : '<p class="text-muted">Aucune capture disponible</p>'
+          }
+          <div class="mt-2">
+            <small class="text-muted">Statut IA: <span class="badge bg-${getStatusColor(
+              lead.ai_extraction_status
+            )}">${lead.ai_extraction_status || "en_attente"}</span></small>
+          </div>
+        </div>
+      `;
+    }
+
+    // Instagram
+    if (lead.instagram_url) {
+      content += `
+        <div class="col-md-6">
+          <h6><i class="fab fa-instagram text-danger"></i> Instagram</h6>
+          <div class="mb-3">
+            <a href="${
+              lead.instagram_url
+            }" target="_blank" class="btn btn-sm btn-outline-danger">
+              <i class="fas fa-external-link-alt"></i> Voir le profil
+            </a>
+            <button class="btn btn-sm btn-success" onclick="captureScreenshot(${leadId}, 'instagram')">
+              <i class="fas fa-camera"></i> Capturer
+            </button>
+            <button class="btn btn-sm btn-info" onclick="analyzeScreenshot(${leadId}, 'instagram')">
+              <i class="fas fa-robot"></i> Analyser IA
+            </button>
+          </div>
+          ${
+            lead.instagram_screenshot_path
+              ? `<img src="/api/lead/${leadId}/screenshot/instagram" class="img-fluid border" alt="Capture Instagram">`
+              : '<p class="text-muted">Aucune capture disponible</p>'
+          }
+          <div class="mt-2">
+            <small class="text-muted">Statut IA: <span class="badge bg-${getStatusColor(
+              lead.ai_extraction_status
+            )}">${lead.ai_extraction_status || "en_attente"}</span></small>
+          </div>
+        </div>
+      `;
+    }
+
+    content += `</div>`;
+
+    // Logs IA
+    if (lead.ai_extraction_log) {
+      content += `
+        <div class="mt-4">
+          <h6><i class="fas fa-list"></i> Logs d'analyse IA</h6>
+          <pre class="bg-light p-3 small">${lead.ai_extraction_log}</pre>
+        </div>
+      `;
+    }
+
+    $("#screenshotContent").html(content);
+    $("#screenshotModal").modal("show");
+  }
+
+  // Fonction pour capturer un écran
+  function captureScreenshot(leadId, platform) {
+    showAlert(`Capture d'écran ${platform} en cours...`, "info");
+
+    fetch(`/api/lead/${leadId}/screenshot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showAlert(`Capture d'écran ${platform} réussie`, "success");
+          loadLeads(); // Recharger pour voir les nouvelles captures
+        } else {
+          showAlert(`Erreur capture ${platform}: ${data.message}`, "danger");
+        }
+      })
+      .catch((error) => {
+        showAlert(`Erreur: ${error.message}`, "danger");
+      });
+  }
+
+  // Fonction pour analyser un écran
+  function analyzeScreenshot(leadId, platform) {
+    showAlert(`Analyse IA ${platform} en cours...`, "info");
+
+    fetch(`/api/lead/${leadId}/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showAlert(`Analyse IA ${platform} réussie`, "success");
+          loadLeads(); // Recharger pour voir les nouvelles données
+        } else {
+          showAlert(`Erreur analyse ${platform}: ${data.message}`, "danger");
+        }
+      })
+      .catch((error) => {
+        showAlert(`Erreur: ${error.message}`, "danger");
+      });
+  }
+
+  // Fonction pour obtenir la couleur du statut
+  function getStatusColor(status) {
+    switch (status) {
+      case "succès":
+        return "success";
+      case "en_cours":
+        return "warning";
+      case "erreur":
+        return "danger";
+      default:
+        return "secondary";
+    }
+  }
+</script>
+{% endblock %}
