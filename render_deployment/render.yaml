@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: la-station-prospection
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: la-station-db
+          property: connectionString
+
+databases:
+  - name: la-station-db
+    plan: free
+    databaseName: la_station_prospection
+    user: la_station_user

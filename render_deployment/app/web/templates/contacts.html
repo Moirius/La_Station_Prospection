@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion des Contacts - La Station Prospection</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .contact-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+      }
+      .contact-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .contact-info {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 5px 0;
+      }
+      .contact-button {
+        margin: 2px;
+        min-width: 80px;
+      }
+      .contacted {
+        background-color: #d4edda !important;
+        border-color: #c3e6cb !important;
+      }
+      .has-info {
+        background-color: #fff3cd !important;
+        border-color: #ffeaa7 !important;
+      }
+      .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+      .loading {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .lead-details {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .detail-label {
+        font-weight: bold;
+        color: #495057;
+      }
+      .detail-value {
+        color: #6c757d;
+      }
+      .filters-section {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .stats-badge {
+        font-size: 0.8em;
+        margin-left: 5px;
+      }
+      .score-high {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .score-medium {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .score-low {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12">
+          <div
+            class="d-flex justify-content-between align-items-center mt-4 mb-4"
+          >
+            <h1>
+              <i class="fas fa-address-book"></i>
+              Gestion des Contacts
+            </h1>
+            <a href="/" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left"></i> Retour au Dashboard
+            </a>
+          </div>
+
+          <!-- Résumé des contacts -->
+          <div class="summary-card">
+            <h3><i class="fas fa-chart-bar"></i> Résumé des Contacts</h3>
+            <div id="contacts-summary" class="row">
+              <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtres et tri -->
+          <div class="filters-section">
+            <div class="row">
+              <div class="col-md-2">
+                <label for="search-input" class="form-label">Recherche</label>
+                <input
+                  type="text"
+                  id="search-input"
+                  class="form-control"
+                  placeholder="Nom, adresse, téléphone..."
+                />
+              </div>
+              <div class="col-md-2">
+                <label for="business-type-filter" class="form-label"
+                  >Domaine</label
+                >
+                <select id="business-type-filter" class="form-select">
+                  <option value="">Tous les domaines</option>
+                  <option value="restaurant">Restaurants</option>
+                  <option value="bar">Bars</option>
+                  <option value="café">Cafés</option>
+                  <option value="boulangerie">Boulangeries</option>
+                  <option value="coiffeur">Coiffeurs</option>
+                  <option value="pharmacie">Pharmacies</option>
+                  <option value="médecin">Médecins</option>
+                  <option value="dentiste">Dentistes</option>
+                  <option value="avocat">Avocats</option>
+                  <option value="comptable">Comptables</option>
+                  <option value="garage">Garages</option>
+                  <option value="plomberie">Plomberie</option>
+                  <option value="électricien">Électriciens</option>
+                  <option value="peintre">Peintres</option>
+                  <option value="jardinier">Jardiniers</option>
+                  <option value="nettoyage">Nettoyage</option>
+                  <option value="sécurité">Sécurité</option>
+                  <option value="transport">Transport</option>
+                  <option value="autre">Autres</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="filter-contacts" class="form-label">Contacts</label>
+                <select id="filter-contacts" class="form-select">
+                  <option value="">Tous les leads</option>
+                  <option value="contacted">Contactés</option>
+                  <option value="not-contacted">Non contactés</option>
+                  <option value="has-info">Avec informations</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="filter-score" class="form-label">Score</label>
+                <select id="filter-score" class="form-select">
+                  <option value="">Tous les scores</option>
+                  <option value="high">Élevé (≥80)</option>
+                  <option value="medium">Moyen (40-79)</option>
+                  <option value="low">Faible (<40)</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="sort-select" class="form-label">Trier par</label>
+                <select id="sort-select" class="form-select">
+                  <option value="nom">Nom (A-Z)</option>
+                  <option value="nom-desc">Nom (Z-A)</option>
+                  <option value="score-desc">Score (élevé → faible)</option>
+                  <option value="score">Score (faible → élevé)</option>
+                  <option value="created-desc">Date (récent)</option>
+                  <option value="created">Date (ancien)</option>
+                  <option value="contacts-desc">Contacts (élevé)</option>
+                  <option value="contacts">Contacts (faible)</option>
+                </select>
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button
+                  class="btn btn-outline-secondary w-100"
+                  onclick="clearFilters()"
+                  title="Effacer tous les filtres"
+                >
+                  <i class="fas fa-times"></i> Effacer
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Liste des leads -->
+          <div class="row">
+            <div class="col-12">
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h3><i class="fas fa-list"></i> Liste des Leads</h3>
+                <div>
+                  <span class="badge bg-primary" id="total-count">0</span> leads
+                  affichés
+                </div>
+              </div>
+              <div id="leads-container">
+                <div class="text-center">
+                  <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Variables globales
+      let leads = [];
+      let filteredLeads = [];
+
+      // Fonctions utilitaires
+      function formatDate(dateString) {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return (
+          date.toLocaleDateString("fr-FR") +
+          " " +
+          date.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        );
+      }
+
+      function getScoreClass(score) {
+        if (!score) return "score-low";
+        if (score >= 7) return "score-high";
+        if (score >= 4) return "score-medium";
+        return "score-low";
+      }
+
+      function getScoreText(score) {
+        if (!score) return "Non évalué";
+        if (score >= 7) return "Élevé";
+        if (score >= 4) return "Moyen";
+        return "Faible";
+      }
+
+      function countContacts(lead) {
+        let count = 0;
+        if (lead.contacted_by_email) count++;
+        if (lead.contacted_by_phone) count++;
+        if (lead.contacted_by_address) count++;
+        if (lead.contacted_by_instagram) count++;
+        if (lead.contacted_by_facebook) count++;
+        if (lead.contacted_by_contact_form) count++;
+        return count;
+      }
+
+      function showToast(message, type = "success") {
+        const toastContainer =
+          document.getElementById("toast-container") || createToastContainer();
+        const toast = document.createElement("div");
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute("role", "alert");
+        toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        toast.addEventListener("hidden.bs.toast", () => {
+          toast.remove();
+        });
+      }
+
+      function createToastContainer() {
+        const container = document.createElement("div");
+        container.id = "toast-container";
+        container.className = "toast-container position-fixed top-0 end-0 p-3";
+        container.style.zIndex = "9999";
+        document.body.appendChild(container);
+        return container;
+      }
+
+      // Charger le résumé des contacts
+      async function loadContactsSummary() {
+        try {
+          const response = await fetch("/api/leads/contacts-summary");
+          const data = await response.json();
+
+          if (data.success) {
+            displayContactsSummary(data.summary);
+          } else {
+            showToast("Erreur lors du chargement du résumé", "danger");
+          }
+        } catch (error) {
+          console.error("Erreur:", error);
+          showToast("Erreur lors du chargement du résumé", "danger");
+        }
+      }
+
+      function displayContactsSummary(summary) {
+        const container = document.getElementById("contacts-summary");
+        const contactTypes = {
+          email: "Email",
+          phone: "Téléphone",
+          address: "Adresse",
+          instagram: "Instagram",
+          facebook: "Facebook",
+          contact_form: "Formulaire",
+        };
+
+        let html = "";
+        Object.entries(summary.contact_types).forEach(([type, data]) => {
+          const percentage =
+            summary.total_leads > 0
+              ? Math.round((data.contacted / summary.total_leads) * 100)
+              : 0;
+          html += `
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="text-center">
+                            <h5>${contactTypes[type]}</h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <small>Info récupérée</small><br>
+                                    <strong>${data.has_info}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small>Contacté</small><br>
+                                    <strong>${data.contacted}</strong>
+                                </div>
+                            </div>
+                            <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar" style="width: ${percentage}%"></div>
+                            </div>
+                            <small>${percentage}%</small>
+                        </div>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      // Charger les leads
+      async function loadLeads() {
+        try {
+          const response = await fetch("/api/leads");
+          const data = await response.json();
+
+          if (data.success) {
+            leads = data.leads;
+            filteredLeads = [...leads];
+            displayLeads(filteredLeads);
+            updateCount();
+          } else {
+            showToast("Erreur lors du chargement des leads", "danger");
+          }
+        } catch (error) {
+          console.error("Erreur:", error);
+          showToast("Erreur lors du chargement des leads", "danger");
+        }
+      }
+
+      function displayLeads(leadsToDisplay) {
+        const container = document.getElementById("leads-container");
+
+        if (leadsToDisplay.length === 0) {
+          container.innerHTML =
+            '<div class="alert alert-info">Aucun lead trouvé</div>';
+          return;
+        }
+
+        let html = "";
+        leadsToDisplay.forEach((lead) => {
+          html += createLeadCard(lead);
+        });
+
+        container.innerHTML = html;
+      }
+
+      function createLeadCard(lead) {
+        const contactTypes = {
+          email: { name: "Email", icon: "fas fa-envelope", value: lead.email },
+          phone: {
+            name: "Téléphone",
+            icon: "fas fa-phone",
+            value: lead.telephone,
+          },
+          address: {
+            name: "Adresse",
+            icon: "fas fa-map-marker-alt",
+            value: lead.adresse,
+          },
+          instagram: {
+            name: "Instagram",
+            icon: "fab fa-instagram",
+            value: lead.instagram_handle || lead.instagram_url,
+          },
+          facebook: {
+            name: "Facebook",
+            icon: "fab fa-facebook",
+            value: lead.facebook_url,
+          },
+          contact_form: {
+            name: "Formulaire",
+            icon: "fas fa-wpforms",
+            value: lead.contact_form_detecte ? "Détecté" : "Non détecté",
+          },
+        };
+
+        // Créer les icônes de contact cliquables avec dates
+        let contactIconsHtml = "";
+        Object.entries(contactTypes).forEach(([type, info]) => {
+          const hasInfo = lead[`has_${type}`];
+          const contacted = lead[`contacted_by_${type}`];
+          const contactDate = lead[`date_contacted_by_${type}`];
+
+          let iconClass = "text-muted";
+          let buttonClass = "btn-outline-secondary";
+          let statusText = "Non disponible";
+
+          if (contacted) {
+            iconClass = "text-success";
+            buttonClass = "btn-success";
+            statusText = `Contacté le ${formatDate(
+              contactDate
+            )} - Cliquer pour décocher`;
+          } else if (hasInfo) {
+            iconClass = "text-warning";
+            buttonClass = "btn-outline-warning";
+            statusText = "Disponible - Cliquer pour marquer comme contacté";
+          }
+
+          contactIconsHtml += `
+            <div class="contact-item mb-2">
+              <button class="btn btn-sm ${buttonClass} contact-icon-btn me-2" 
+                                onclick="toggleContact(${lead.id}, '${type}')"
+                      title="${statusText}">
+                <i class="${info.icon} ${iconClass}"></i>
+                            ${info.name}
+                        </button>
+                        ${
+                          contactDate
+                            ? `
+                <small class="text-muted d-block">
+                  <i class="fas fa-calendar-alt"></i> ${formatDate(contactDate)}
+                </small>
+                        `
+                            : ""
+                        }
+                    </div>
+                `;
+        });
+
+        // Utiliser score_ia en priorité, sinon score_opportunite
+        const scoreToUse =
+          lead.score_ia !== null && lead.score_ia !== undefined
+            ? lead.score_ia
+            : lead.score_opportunite;
+        const scoreClass = getScoreClass(scoreToUse);
+        const scoreText = getScoreText(scoreToUse);
+
+        return `
+          <div class="card contact-card mb-3">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <h6 class="card-title mb-2">
+                    <i class="fas fa-building text-primary me-2"></i>
+                    ${lead.nom}
+                  </h6>
+                  <div class="mb-2">
+                    <span class="badge ${scoreClass}">
+                      <i class="fas fa-chart-line me-1"></i>
+                                    Score: ${
+                                      scoreToUse ? scoreToUse.toFixed(1) : "N/A"
+                                    } (${scoreText})
+                                </span>
+                            </div>
+                  <div class="contact-section">
+                    <h6 class="text-muted mb-2">
+                      <i class="fas fa-phone"></i> Canaux de contact
+                    </h6>
+                    <div class="contact-icons">
+                      ${contactIconsHtml}
+                        </div>
+                    </div>
+                                    </div>
+                <div class="ms-3">
+                  <button class="btn btn-sm btn-outline-primary" onclick="viewLeadDetails(${
+                    lead.id
+                  })" title="Voir tous les détails">
+                    <i class="fas fa-eye"></i>
+                                    </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      }
+
+      // Fonctions de tri et filtrage unifiées
+      function filterLeads() {
+        const searchTerm = document
+          .getElementById("search-input")
+          .value.toLowerCase();
+        const businessTypeFilter = document.getElementById(
+          "business-type-filter"
+        ).value;
+        const contactFilter = document.getElementById("filter-contacts").value;
+        const scoreFilter = document.getElementById("filter-score").value;
+        const sortBy = document.getElementById("sort-select").value;
+
+        filteredLeads = leads.filter((lead) => {
+          // Filtre par recherche
+          if (searchTerm) {
+            const searchFields = [
+              lead.nom,
+              lead.adresse,
+              lead.telephone,
+              lead.email,
+              lead.business_type,
+            ]
+              .filter((field) => field)
+              .join(" ")
+              .toLowerCase();
+
+            if (!searchFields.includes(searchTerm)) return false;
+          }
+
+          // Filtre par domaine
+          if (businessTypeFilter && lead.business_type !== businessTypeFilter)
+            return false;
+
+          // Filtre par contacts
+          if (contactFilter) {
+            const contactsCount = countContacts(lead);
+            if (contactFilter === "contacted" && contactsCount === 0)
+              return false;
+            if (contactFilter === "not-contacted" && contactsCount > 0)
+              return false;
+            if (contactFilter === "has-info") {
+              const hasAnyInfo =
+                lead.has_email ||
+                lead.has_phone ||
+                lead.has_address ||
+                lead.has_instagram ||
+                lead.has_facebook ||
+                lead.has_contact_form;
+              if (!hasAnyInfo) return false;
+            }
+          }
+
+          // Filtre par score (corrigé)
+          if (scoreFilter) {
+            const score = lead.score_opportunite || 0;
+            if (scoreFilter === "high" && score < 80) return false;
+            if (scoreFilter === "medium" && (score < 40 || score >= 80))
+              return false;
+            if (scoreFilter === "low" && score >= 40) return false;
+          }
+
+          return true;
+        });
+
+        // Appliquer le tri
+        if (sortBy) {
+          filteredLeads.sort((a, b) => {
+            switch (sortBy) {
+              case "nom":
+                return a.nom.localeCompare(b.nom);
+              case "nom-desc":
+                return b.nom.localeCompare(a.nom);
+              case "score-desc":
+                return (b.score_opportunite || 0) - (a.score_opportunite || 0);
+              case "score":
+                return (a.score_opportunite || 0) - (b.score_opportunite || 0);
+              case "created-desc":
+                return new Date(b.created_at) - new Date(a.created_at);
+              case "created":
+                return new Date(a.created_at) - new Date(b.created_at);
+              case "contacts-desc":
+                return countContacts(b) - countContacts(a);
+              case "contacts":
+                return countContacts(a) - countContacts(b);
+              default:
+                return 0;
+            }
+          });
+        }
+
+        displayLeads(filteredLeads);
+        updateCount();
+      }
+
+      // Event listeners pour les filtres
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("search-input")
+          .addEventListener("input", filterLeads);
+        document
+          .getElementById("business-type-filter")
+          .addEventListener("change", filterLeads);
+        document
+          .getElementById("filter-contacts")
+          .addEventListener("change", filterLeads);
+        document
+          .getElementById("filter-score")
+          .addEventListener("change", filterLeads);
+        document
+          .getElementById("sort-select")
+          .addEventListener("change", filterLeads);
+      });
+
+      function searchLeads() {
+        filterLeads();
+      }
+
+      function updateCount() {
+        document.getElementById("total-count").textContent =
+          filteredLeads.length;
+      }
+
+      function clearFilters() {
+        document.getElementById("search-input").value = "";
+        document.getElementById("business-type-filter").value = "";
+        document.getElementById("filter-contacts").value = "";
+        document.getElementById("filter-score").value = "";
+        document.getElementById("sort-select").value = "nom";
+        filteredLeads = [...leads];
+        displayLeads(filteredLeads);
+        updateCount();
+      }
+
+      // Toggle contact (cocher/décocher)
+      async function toggleContact(leadId, contactType) {
+        const button = event.target.closest(".contact-icon-btn");
+        const card = button.closest(".contact-card");
+
+        if (!button) {
+          console.error("Bouton non trouvé");
+          return;
+        }
+
+        card.classList.add("loading");
+
+        try {
+          const contacted = button.classList.contains("btn-success");
+
+          if (contacted) {
+            // Décocher le contact
+            const response = await fetch(
+              `/api/lead/${leadId}/contact/${contactType}`,
+              {
+                method: "DELETE",
+              }
+            );
+            const data = await response.json();
+
+            if (data.success) {
+              showToast(
+                `✅ Contact ${contactType} décroché - ${formatDate(
+                  new Date()
+                )}`,
+                "success"
+              );
+              await loadLeads();
+              await loadContactsSummary();
+            } else {
+              showToast(data.message, "danger");
+            }
+          } else {
+            // Cocher le contact
+            const response = await fetch(`/api/lead/${leadId}/contact`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contact_type: contactType,
+              }),
+            });
+            const data = await response.json();
+
+            if (data.success) {
+              showToast(
+                `✅ Contact ${contactType} marqué comme effectué - ${formatDate(
+                  new Date()
+                )}`,
+                "success"
+              );
+              await loadLeads();
+              await loadContactsSummary();
+            } else {
+              showToast(data.message, "danger");
+            }
+          }
+        } catch (error) {
+          console.error("Erreur:", error);
+          showToast("Erreur lors de la mise à jour du contact", "danger");
+        } finally {
+          card.classList.remove("loading");
+        }
+      }
+
+      // Fonction utilitaire pour formater les nombres
+      function formatNumber(num) {
+        if (num === null || num === undefined) return "N/A";
+        return num.toLocaleString("fr-FR");
+      }
+
+      // Voir les détails d'un lead
+      async function viewLeadDetails(leadId) {
+        try {
+          const response = await fetch(`/api/lead/${leadId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            showLeadModal(data.lead);
+          } else {
+            showToast(`Erreur: ${data.message}`, "danger");
+          }
+        } catch (error) {
+          console.error("Erreur:", error);
+          showToast("Erreur lors du chargement des détails", "danger");
+        }
+      }
+
+      // Afficher la modal de détails
+      function showLeadModal(lead) {
+        const modal = `
+          <div class="modal fade" id="leadModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Détails du Lead: ${lead.nom}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="row">
+                    <div class="col-12">
+                      
+                      <!-- 1. INFOS DE BASE -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                          <h6 class="mb-0"><i class="fas fa-info-circle"></i> Infos de Base</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <p><strong>Nom:</strong> ${
+                                lead.nom || "Non renseigné"
+                              }</p>
+                              
+                              <!-- Emails de toutes les sources -->
+                              <div class="mb-2">
+                                <strong>Emails:</strong>
+                                <ul class="list-unstyled ms-3">
+                                  ${
+                                    lead.email
+                                      ? `<li><i class="fas fa-envelope text-primary"></i> Base: ${lead.email}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.google_maps_email
+                                      ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_email}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.site_web_email
+                                      ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_email}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    !lead.email &&
+                                    !lead.google_maps_email &&
+                                    !lead.site_web_email
+                                      ? '<li class="text-muted">Aucun email trouvé</li>'
+                                      : ""
+                                  }
+                                </ul>
+                              </div>
+                              
+                              <!-- Téléphones de toutes les sources -->
+                              <div class="mb-2">
+                                <strong>Téléphones:</strong>
+                                <ul class="list-unstyled ms-3">
+                                  ${
+                                    lead.telephone
+                                      ? `<li><i class="fas fa-phone text-primary"></i> Base: ${lead.telephone}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.google_maps_telephone
+                                      ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_telephone}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.site_web_telephone
+                                      ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_telephone}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    !lead.telephone &&
+                                    !lead.google_maps_telephone &&
+                                    !lead.site_web_telephone
+                                      ? '<li class="text-muted">Aucun téléphone trouvé</li>'
+                                      : ""
+                                  }
+                                </ul>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <!-- Adresses de toutes les sources -->
+                              <div class="mb-2">
+                                <strong>Adresses:</strong>
+                                <ul class="list-unstyled ms-3">
+                                  ${
+                                    lead.adresse
+                                      ? `<li><i class="fas fa-map-marker-alt text-primary"></i> Base: ${lead.adresse}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.google_maps_adresse
+                                      ? `<li><i class="fab fa-google text-success"></i> Google Maps: ${lead.google_maps_adresse}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    lead.site_web_adresse
+                                      ? `<li><i class="fas fa-globe text-info"></i> Site Web: ${lead.site_web_adresse}</li>`
+                                      : ""
+                                  }
+                                  ${
+                                    !lead.adresse &&
+                                    !lead.google_maps_adresse &&
+                                    !lead.site_web_adresse
+                                      ? '<li class="text-muted">Aucune adresse trouvée</li>'
+                                      : ""
+                                  }
+                                </ul>
+                              </div>
+                              
+                              <p><strong>Note Google:</strong> ${
+                                lead.note_google || "Non renseignée"
+                              }</p>
+                              <p><strong>Nombre d'avis:</strong> ${
+                                lead.nb_avis_google || "Non renseigné"
+                              }</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 2. INFOS GOOGLE MAPS -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                          <h6 class="mb-0"><i class="fab fa-google"></i> Infos Google Maps</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <p><strong>Email:</strong> ${
+                                lead.google_maps_email || "Non trouvé"
+                              }</p>
+                              <p><strong>Téléphone:</strong> ${
+                                lead.google_maps_telephone || "Non trouvé"
+                              }</p>
+                            </div>
+                            <div class="col-md-6">
+                              <p><strong>Adresse:</strong> ${
+                                lead.google_maps_adresse || "Non trouvée"
+                              }</p>
+                              <p><strong>Site web:</strong> ${
+                                lead.site_web
+                                  ? `<a href="${lead.site_web}" target="_blank">${lead.site_web}</a>`
+                                  : "Non trouvé"
+                              }</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 3. SITE WEB -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                          <h6 class="mb-0"><i class="fas fa-globe"></i> Site Web (Analyse IA)</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <p><strong>Email:</strong> ${
+                                lead.site_web_email || "Non trouvé"
+                              }</p>
+                              <p><strong>Téléphone:</strong> ${
+                                lead.site_web_telephone || "Non trouvé"
+                              }</p>
+                              <p><strong>Adresse:</strong> ${
+                                lead.site_web_adresse || "Non trouvée"
+                              }</p>
+                            </div>
+                            <div class="col-md-6">
+                              <p><strong>Description:</strong> ${
+                                lead.site_web_description || "Non trouvée"
+                              }</p>
+                              <p><strong>Horaires:</strong> ${
+                                lead.site_web_horaires || "Non trouvés"
+                              }</p>
+                              <p><strong>Services:</strong> ${
+                                lead.site_web_services || "Non trouvés"
+                              }</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 4. INSTAGRAM ET FACEBOOK -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                          <h6 class="mb-0"><i class="fas fa-share-alt"></i> Instagram et Facebook</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <h6 class="text-primary">📘 Facebook</h6>
+                              <p><strong>URL:</strong> ${
+                                lead.facebook_url
+                                  ? `<a href="${lead.facebook_url}" target="_blank">${lead.facebook_url}</a>`
+                                  : "Non trouvé"
+                              }</p>
+                              
+                              <p><strong>Statistiques:</strong></p>
+                              <ul class="list-unstyled ms-3">
+                                <li>📊 Followers: ${
+                                  lead.nb_followers_facebook !== null &&
+                                  lead.nb_followers_facebook !== undefined
+                                    ? formatNumber(lead.nb_followers_facebook)
+                                    : "N/A"
+                                }</li>
+                                <li>❤️ Likes: ${
+                                  lead.nb_likes_facebook !== null &&
+                                  lead.nb_likes_facebook !== undefined
+                                    ? formatNumber(lead.nb_likes_facebook)
+                                    : "N/A"
+                                }</li>
+                              </ul>
+                              
+                              <p><strong>Description:</strong></p>
+                              <p class="text-muted ms-3">${
+                                lead.intro_facebook || "Non disponible"
+                              }</p>
+                              
+                              <p><strong>Informations:</strong></p>
+                              <ul class="list-unstyled ms-3">
+                                <li>📞 Téléphone: ${
+                                  lead.facebook_telephone || "Non disponible"
+                                }</li>
+                                <li>📧 Email: ${
+                                  lead.facebook_email || "Non disponible"
+                                }</li>
+                                <li>📍 Adresse: ${
+                                  lead.facebook_adresse || "Non disponible"
+                                }</li>
+                                <li>🌐 Site web: ${
+                                  lead.facebook_site_web || "Non disponible"
+                                }</li>
+                              </ul>
+                            </div>
+                            <div class="col-md-6">
+                              <h6 class="text-danger">📷 Instagram</h6>
+                              <p><strong>URL:</strong> ${
+                                lead.instagram_url
+                                  ? `<a href="${lead.instagram_url}" target="_blank">${lead.instagram_url}</a>`
+                                  : "Non trouvé"
+                              }</p>
+                              
+                              <p><strong>Statistiques:</strong></p>
+                              <ul class="list-unstyled ms-3">
+                                <li>📸 Posts: ${
+                                  lead.nb_posts_instagram !== null &&
+                                  lead.nb_posts_instagram !== undefined
+                                    ? formatNumber(lead.nb_posts_instagram)
+                                    : "N/A"
+                                }</li>
+                                <li>📊 Followers: ${
+                                  lead.nb_followers_instagram !== null &&
+                                  lead.nb_followers_instagram !== undefined
+                                    ? formatNumber(lead.nb_followers_instagram)
+                                    : "N/A"
+                                }</li>
+                                <li>👥 Following: ${
+                                  lead.nb_following_instagram !== null &&
+                                  lead.nb_following_instagram !== undefined
+                                    ? formatNumber(lead.nb_following_instagram)
+                                    : "N/A"
+                                }</li>
+                              </ul>
+                              
+                              <p><strong>Bio:</strong></p>
+                              <p class="text-muted ms-3">${
+                                lead.bio_instagram || "Non disponible"
+                              }</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 5. SCORING IA -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-dark text-white">
+                          <h6 class="mb-0"><i class="fas fa-robot"></i> Scoring IA</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <p><strong>Score:</strong> ${
+                                lead.score_ia
+                                  ? `${lead.score_ia}/100`
+                                  : "Non calculé"
+                              }</p>
+                            </div>
+                            <div class="col-md-6">
+                              <p><strong>Argumentaire:</strong> ${
+                                lead.argumentaire_ia || "Non généré"
+                              }</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Supprimer l'ancienne modal si elle existe
+        const existingModal = document.getElementById("leadModal");
+        if (existingModal) {
+          existingModal.remove();
+        }
+
+        // Ajouter et afficher la nouvelle modal
+        document.body.insertAdjacentHTML("beforeend", modal);
+        const modalElement = document.getElementById("leadModal");
+        const bsModal = new bootstrap.Modal(modalElement);
+        bsModal.show();
+      }
+
+      // Initialisation
+      document.addEventListener("DOMContentLoaded", function () {
+        loadContactsSummary();
+        loadLeads();
+      });
+    </script>
+  </body>
+</html>
